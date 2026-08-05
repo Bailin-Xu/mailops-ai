@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MailOps AI
 
-## Getting Started
+MailOps AI is a local, human-in-the-loop email operations MVP. It imports `.eml`
+messages, classifies English and French inquiries, retrieves only human-approved
+knowledge, creates grounded reply drafts, and simulates sending.
 
-First, run the development server:
+The project is intentionally provider-agnostic. The MVP uses synthetic email data,
+a deterministic mock AI provider for development and tests, and an optional Gemini
+provider behind an internal interface.
+
+## Prerequisites
+
+- Node.js 20 or newer
+- Docker Desktop with Docker Compose
+
+## Local setup
 
 ```bash
+cp .env.example .env
+npm install
+docker compose up -d
+npm run db:validate
+npm run db:migrate -- --name init
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The database health endpoint is
+available at [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The first migration may contain no application tables. Domain tables are introduced
+with the EML import slice so the database design follows `docs/03-domain-model.md`
+instead of creating speculative tables.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Common commands
 
-## Learn More
+```bash
+npm run lint          # ESLint
+npm run typecheck     # TypeScript strict-mode check
+npm run test          # Vitest test suite
+npm run build         # Production build
+npm run check         # All required quality checks
+npm run db:generate   # Regenerate Prisma Client
+npm run db:migrate    # Create/apply a development migration
+npm run db:studio     # Inspect local data
+docker compose down   # Stop PostgreSQL without deleting its volume
+```
 
-To learn more about Next.js, take a look at the following resources:
+The container publishes PostgreSQL on host port `5433` to avoid clashing with a
+PostgreSQL installation that may already be using the conventional port `5432`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## MVP learning path
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Foundation: local PostgreSQL, Prisma, configuration validation, quality checks.
+2. Intake: `.eml` validation, parsing, normalization, duplicate detection.
+3. Inbox: persistence, thread reconstruction, search, and review UI.
+4. AI boundary: structured schemas, mock provider, Gemini provider, execution logs.
+5. Human review: classification correction and knowledge approval workflows.
+6. Grounded generation: keyword/full-text retrieval, cited drafts, simulated send.
 
-## Deploy on Vercel
+Vector embeddings are deliberately deferred until the keyword/PostgreSQL retrieval
+baseline works and can be evaluated. This makes later RAG improvements measurable.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Safety boundaries
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Use only synthetic or safely redacted `.eml` fixtures.
+- Never commit `.env`, API keys, or real private email content.
+- Never process attachment bodies or load remote images in the MVP.
+- AI output remains untrusted until a human reviews it.
+- Sending is simulated; no real mailbox provider is connected.
