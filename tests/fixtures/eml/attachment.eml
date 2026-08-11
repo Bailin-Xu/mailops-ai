@@ -1,0 +1,19 @@
+From: Alice Example <alice@example.test>
+To: Support <support@example.test>
+Subject: File metadata
+Date: Sun, 18 Jan 2026 11:00:00 +0000
+Message-ID: <attachment-001@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mailops-boundary"
+
+--mailops-boundary
+Content-Type: text/plain; charset=UTF-8
+
+Please see the attached synthetic file.
+--mailops-boundary
+Content-Type: text/plain; name="example.txt"
+Content-Disposition: attachment; filename="example.txt"
+Content-Transfer-Encoding: base64
+
+aGVsbG8gd29ybGQ=
+--mailops-boundary--

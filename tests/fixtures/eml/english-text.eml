@@ -1,0 +1,13 @@
+From: Alice Example <alice@example.test>
+To: Support Team <support@example.test>
+Subject: Opening hours
+Date: Thu, 15 Jan 2026 14:30:00 +0000
+Message-ID: <English-001@Example.Test>
+In-Reply-To: <Parent-001@Example.Test>
+References: <Root-001@Example.Test> <Parent-001@Example.Test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Hello,
+
+Are you open on Saturday?

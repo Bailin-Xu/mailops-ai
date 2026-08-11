@@ -7,6 +7,39 @@ datasource db {
   provider = "postgresql"
 }
 
-// Domain models will be introduced with the EML import vertical slice.
-// Keeping this schema empty avoids committing speculative tables before the
-// choices in docs/03-domain-model.md are resolved.
+model EmailThread {
+  id                String         @id @default(uuid()) @db.Uuid
+  subject           String
+  normalizedSubject String
+  status            String         @default("NEW")
+  language          String?
+  isIncomplete      Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  messages          EmailMessage[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model EmailMessage {
+  id             String      @id @default(uuid()) @db.Uuid
+  threadId       String      @db.Uuid
+  messageId      String?     @unique
+  inReplyTo      String?
+  references     String[]    @default([])
+  subject        String
+  sentAt         DateTime?
+  textBody       String?
+  htmlBody       String?
+  normalizedBody String
+  sourceFileName String
+  fingerprint    String      @unique
+  parseStatus    String      @default("PARSED")
+  parseWarnings  String[]    @default([])
+  createdAt      DateTime    @default(now())
+  thread         EmailThread @relation(fields: [threadId], references: [id], onDelete: Restrict)
+
+  @@index([threadId, sentAt])
+  @@index([sentAt])
+}

@@ -27,9 +27,9 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). The database health endpoint is
 available at [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
-The first migration may contain no application tables. Domain tables are introduced
-with the EML import slice so the database design follows `docs/03-domain-model.md`
-instead of creating speculative tables.
+The database currently contains the first two domain models, `EmailThread` and
+`EmailMessage`. Additional participant and attachment metadata tables will be added
+when parsed messages are connected to the ingestion service.
 
 ## Common commands
 
@@ -37,6 +37,7 @@ instead of creating speculative tables.
 npm run lint          # ESLint
 npm run typecheck     # TypeScript strict-mode check
 npm run test          # Vitest test suite
+npm run eml:scan      # Aggregate-only scan of private local EML files
 npm run build         # Production build
 npm run check         # All required quality checks
 npm run db:generate   # Regenerate Prisma Client
@@ -47,6 +48,19 @@ docker compose down   # Stop PostgreSQL without deleting its volume
 
 The container publishes PostgreSQL on host port `5433` to avoid clashing with a
 PostgreSQL installation that may already be using the conventional port `5432`.
+
+## Local EML validation
+
+Place private email files in `data/raw/all-eml/`. The entire `data/raw/` directory is
+ignored by Git and must never be committed. Run:
+
+```bash
+npm run eml:scan
+```
+
+The scanner enforces the 10 MiB MVP limit and prints aggregate counts only. It does
+not print filenames, addresses, subjects, bodies, or attachment content. Automated
+tests use synthetic fixtures under `tests/fixtures/eml/`.
 
 ## MVP learning path
 
