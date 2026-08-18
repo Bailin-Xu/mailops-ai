@@ -115,11 +115,54 @@ describe("automatic processing", () => {
     expect(draft.knowledgeSources.map((source) => source.knowledgeEntryId)).toEqual([entry.id]);
     expect(draft.status).toBe("GENERATED");
 
-    await confirmAndSimulateSend(draft.id, db);
+    await confirmAndSimulateSend({
+      draftId: draft.id,
+      subject: "Re: Human-reviewed shipping answer",
+      body: `${draft.body}\n\nHuman clarification.`,
+      language: "en",
+    }, db);
     await expect(db.draft.findUnique({ where: { id: draft.id } })).resolves.toMatchObject({
       status: "SIMULATED_SENT",
-      approvedBody: draft.body,
+      subject: draft.subject,
+      body: draft.body,
+      approvedSubject: "Re: Human-reviewed shipping answer",
+      approvedBody: `${draft.body}\n\nHuman clarification.`,
+      approvedLanguage: "en",
     });
+    await expect(confirmAndSimulateSend({
+      draftId: draft.id,
+      subject: "Re: Duplicate confirmation",
+      body: "This second confirmation must not overwrite the approved reply.",
+      language: "en",
+    }, db)).rejects.toThrow("no longer ready to send");
+  });
+
+  it("searches approved knowledge for a high-confidence unknown question before human fallback", async () => {
+    const marker = `unknownlookup${randomUUID().replaceAll("-", "")}`;
+    const entry = await createKnowledge(marker);
+    const thread = await createInboundThread(
+      `${marker} shipping gallery`,
+      `Please explain the ${marker} shipping policy for this gallery artwork.`,
+    );
+
+    const classification = await runThreadAutomation(
+      thread.id,
+      new HighConfidenceUnknownProvider(),
+      db,
+    );
+
+    expect(classification).toMatchObject({
+      aiCategory: "UNKNOWN_QUESTION",
+      reviewStatus: "AUTO_ROUTED",
+      route: "KNOWN_KNOWLEDGE",
+      processingStatus: "DRAFT_READY",
+      knowledgeMatchCount: 1,
+    });
+    const draft = await db.draft.findFirstOrThrow({
+      where: { classificationId: classification.id },
+      include: { knowledgeSources: true },
+    });
+    expect(draft.knowledgeSources.map((source) => source.knowledgeEntryId)).toEqual([entry.id]);
   });
 
   it("routes an art-related decline to manual review instead of treating it as known", async () => {
@@ -150,7 +193,7 @@ describe("automatic processing", () => {
     expect(classification).toMatchObject({
       aiCategory: "KNOWN_QUESTION",
       reviewStatus: "AUTO_ROUTED",
-      route: "KNOWN_KNOWLEDGE",
+      route: "HUMAN_ANSWER_QUEUE",
       processingStatus: "NO_KNOWLEDGE",
       knowledgeMatchCount: 0,
     });
@@ -200,6 +243,17 @@ describe("automatic processing", () => {
     });
   });
 });
+
+class HighConfidenceUnknownProvider extends MockAIProvider {
+  override async classifyEmail() {
+    return {
+      category: "UNKNOWN_QUESTION" as const,
+      confidence: 0.9,
+      language: "en" as const,
+      requiresHumanReview: false,
+    };
+  }
+}
 
 async function createInboundThread(subject: string, body: string) {
   const id = randomUUID();

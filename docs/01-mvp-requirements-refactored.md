@@ -569,7 +569,7 @@ Vector search is excluded from the MVP.
 
 ### FR-070 — Generate grounded reference draft automatically
 
-For a high-confidence or human-corrected known question, the system shall automatically retrieve Active Knowledge and generate a grounded Dorian-style reference reply.
+For a high-confidence or human-corrected ordinary question, including an `UNKNOWN_QUESTION`, the system shall attempt Active Knowledge retrieval. A grounded Dorian-style reference reply may be generated only when the deterministic relevance gate selects an approved answer; otherwise the message falls back to a human.
 
 The MVP shall build retrieval queries from question-like body text, reject broad
 or title-only matches with a deterministic relevance gate, and ground the initial

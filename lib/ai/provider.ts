@@ -45,6 +45,16 @@ export type DraftInput = {
 
 export type DraftResult = z.infer<typeof draftResultSchema>;
 
+export type AIExecutionMetadata = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  thoughtsTokens?: number;
+  modelVersion?: string;
+  responseId?: string;
+  finishReason?: string;
+};
+
 export interface AIProvider {
   readonly id: string;
   readonly model: string;
@@ -52,4 +62,5 @@ export interface AIProvider {
   readonly draftPromptVersion: string;
   classifyEmail(input: ClassificationInput): Promise<unknown>;
   generateDraft(input: DraftInput): Promise<unknown>;
+  getExecutionMetadata?(output: unknown): AIExecutionMetadata | undefined;
 }

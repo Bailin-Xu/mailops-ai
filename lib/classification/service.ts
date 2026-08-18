@@ -6,6 +6,7 @@ import {
 import {
   classificationCategoryValues,
   classificationResultSchema,
+  type AIExecutionMetadata,
   type AIProvider,
 } from "@/lib/ai/provider";
 import { getDb } from "@/lib/db";
@@ -70,6 +71,7 @@ export async function runThreadClassification(
   }
 
   const validated = classificationResultSchema.safeParse(providerOutput);
+  const executionMetadata = provider.getExecutionMetadata?.(providerOutput);
   if (!validated.success) {
     await recordFailedExecution({
       provider,
@@ -77,6 +79,7 @@ export async function runThreadClassification(
       metadata,
       errorMessage: "The provider returned an invalid classification.",
       validationErrors: validated.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+      executionMetadata,
       db,
     });
     throw new Error("Classification output failed validation. The previous result was preserved.");
@@ -93,7 +96,9 @@ export async function runThreadClassification(
         promptVersion: provider.classificationPromptVersion,
         status: "SUCCEEDED",
         latencyMs,
-        inputMetadata: metadata,
+        inputTokens: executionMetadata?.inputTokens,
+        outputTokens: executionMetadata?.outputTokens,
+        inputMetadata: withProviderResponseMetadata(metadata, executionMetadata),
         output: result,
       },
     });
@@ -176,6 +181,7 @@ async function recordFailedExecution(input: {
   metadata: Prisma.InputJsonObject;
   errorMessage: string;
   validationErrors?: string[];
+  executionMetadata?: AIExecutionMetadata;
   db: PrismaClient;
 }) {
   await input.db.aIExecution.create({
@@ -186,9 +192,26 @@ async function recordFailedExecution(input: {
       promptVersion: input.provider.classificationPromptVersion,
       status: "FAILED",
       latencyMs: input.latencyMs,
-      inputMetadata: input.metadata,
+      inputTokens: input.executionMetadata?.inputTokens,
+      outputTokens: input.executionMetadata?.outputTokens,
+      inputMetadata: withProviderResponseMetadata(input.metadata, input.executionMetadata),
       validationErrors: input.validationErrors ?? [],
       errorMessage: input.errorMessage,
     },
   });
+}
+
+function withProviderResponseMetadata(
+  base: Prisma.InputJsonObject,
+  metadata?: AIExecutionMetadata,
+): Prisma.InputJsonObject {
+  if (!metadata) return base;
+  const providerResponse: Prisma.InputJsonObject = {
+    ...(metadata.totalTokens !== undefined ? { totalTokens: metadata.totalTokens } : {}),
+    ...(metadata.thoughtsTokens !== undefined ? { thoughtsTokens: metadata.thoughtsTokens } : {}),
+    ...(metadata.modelVersion ? { modelVersion: metadata.modelVersion } : {}),
+    ...(metadata.responseId ? { responseId: metadata.responseId } : {}),
+    ...(metadata.finishReason ? { finishReason: metadata.finishReason } : {}),
+  };
+  return Object.keys(providerResponse).length ? { ...base, providerResponse } : base;
 }

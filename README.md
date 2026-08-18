@@ -39,7 +39,11 @@ npm run typecheck     # TypeScript strict-mode check
 npm run test          # Vitest test suite
 npm run eml:scan      # Aggregate-only scan of private local EML files
 npm run eml:import    # Import a private local EML directory and auto-process inbound mail with Mock AI
+npm run eml:demo:seed # Import three synthetic known-question emails without calling AI
 npm run eml:threads:plan # Dry-run thread reconstruction
+npm run ai:gemini:smoke # Two synthetic Gemini calls; never uses stored email
+npm run ai:eval:synthetic # Run the 12-message synthetic Shadow Mode acceptance set
+npm run ai:eval:holdout # Run or resume the frozen 8-message holdout without repeating calls
 npm run build         # Production build
 npm run check         # All required quality checks
 npm run db:generate   # Regenerate Prisma Client
@@ -47,6 +51,15 @@ npm run db:migrate    # Create/apply a development migration
 npm run db:studio     # Inspect local data
 docker compose down   # Stop PostgreSQL without deleting its volume
 ```
+
+Gemini is optional. Keep `AI_PROVIDER="mock"` for deterministic offline work. To
+test Gemini in Shadow Mode, store `GEMINI_API_KEY` only in the ignored local
+`.env`, set `GEMINI_MODEL="gemini-3.5-flash-lite"`, then change
+`AI_PROVIDER="gemini"` and restart the development server. The provider sends
+only the subject and cleaned inbound body for classification, or that same input
+plus one selected Active Knowledge entry for draft generation. It never sends
+attachments and never performs delivery. Free-tier Gemini must be limited to
+synthetic or safely redacted messages.
 
 The container publishes PostgreSQL on host port `5433` to avoid clashing with a
 PostgreSQL installation that may already be using the conventional port `5432`.
@@ -63,6 +76,10 @@ npm run eml:scan
 The scanner enforces the 10 MiB MVP limit and prints aggregate counts only. It does
 not print filenames, addresses, subjects, bodies, or attachment content. Automated
 tests use synthetic fixtures under `tests/fixtures/eml/`.
+
+To add three safe, unclassified inbound messages that exactly correspond to
+approved demo knowledge, run `npm run eml:demo:seed`. The command is idempotent
+and does not call an AI provider; open Inbox and trigger each test manually.
 
 The reusable `ingestEml()` service imports one buffer at a time. It parses and
 validates the message, checks `Message-ID` and fingerprint duplicates, then writes a

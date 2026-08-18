@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import {
   confirmSimulatedSendAction,
@@ -13,7 +13,7 @@ import {
 } from "@/app/inbox/actions";
 import { classificationCategoryValues } from "@/lib/ai/provider";
 
-const initialState: InboxActionState = { status: "idle", message: "" };
+const initialState: InboxActionState = { status: "idle", message: "", completedAt: 0 };
 
 type ClassificationView = {
   id: string;
@@ -44,8 +44,11 @@ type ClassificationView = {
     body: string;
     language: string;
     style: string;
-    mode: "MOCK_GROUNDED" | "MANUAL";
+    mode: "MOCK_GROUNDED" | "AI_GROUNDED" | "MANUAL";
     status: "GENERATED" | "SUPERSEDED" | "SIMULATED_SENT";
+    approvedSubject: string | null;
+    approvedBody: string | null;
+    approvedLanguage: string | null;
     simulatedSentAt: Date | null;
     knowledgeSources: Array<{
       rank: number;
@@ -65,10 +68,13 @@ type ClassificationView = {
 export function ClassificationPanel({
   threadId,
   classification,
+  providerId,
 }: {
   threadId: string;
   classification: ClassificationView | null;
+  providerId: "mock" | "gemini";
 }) {
+  const panelRef = useRef<HTMLElement>(null);
   const [runState, runAction, running] = useActionState(runClassificationAction, initialState);
   const [reviewState, reviewAction, reviewing] = useActionState(reviewClassificationAction, initialState);
   const [retryState, retryAction, retrying] = useActionState(retryProcessingAction, initialState);
@@ -78,19 +84,25 @@ export function ClassificationPanel({
   const draft = classification?.drafts[0] ?? null;
   const effectiveCategory = classification?.reviewedCategory ?? classification?.aiCategory;
   const feedback = [runState, reviewState, retryState, sendState, forwardState, answerState]
-    .find((state) => state.status !== "idle") ?? initialState;
+    .reduce((latest, state) => state.completedAt > latest.completedAt ? state : latest, initialState);
+
+  useEffect(() => {
+    if (feedback.status === "idle") return;
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [feedback.completedAt, feedback.status]);
 
   return (
-    <section className="inbox-classification-panel">
+    <section className="inbox-classification-panel" ref={panelRef}>
       <header>
         <div>
           <p>Automatic processing track</p>
           <h3>{classification ? "Classify → Route → Ground → Confirm" : "Ready for automatic processing"}</h3>
+          <span className="inbox-provider-badge">Current provider: {providerId}</span>
         </div>
         <form action={runAction}>
           <input name="threadId" type="hidden" value={threadId} />
           <button disabled={running} type="submit">
-            {running ? "Processing…" : classification ? "Run a new mock attempt" : "Run automatic processing"}
+            {running ? "Processing…" : classification ? "Run a new AI attempt" : "Run automatic processing"}
           </button>
         </form>
       </header>
@@ -99,7 +111,7 @@ export function ClassificationPanel({
 
       {!classification ? (
         <div className="inbox-classification-empty">
-          <strong>Local Mock provider</strong>
+          <strong>Configured AI provider</strong>
           <p>One action classifies and routes the latest inbound message. Known questions also search Active Knowledge and prepare a grounded reference reply.</p>
         </div>
       ) : (
@@ -110,6 +122,8 @@ export function ClassificationPanel({
             <ProcessingStep label="Prepared" value={preparationLabel(classification.processingStatus)} active={Boolean(classification.processingStatus)} />
             <ProcessingStep label="Human gate" value={humanGateLabel(classification.processingStatus)} active={["SIMULATED_SENT", "SIMULATED_FORWARDED", "NO_ACTION"].includes(classification.processingStatus ?? "")} />
           </div>
+
+          <ProcessingOutcome status={classification.processingStatus} />
 
           <div className="inbox-ai-proposal">
             <div className="inbox-ai-meta">
@@ -157,9 +171,9 @@ export function ClassificationPanel({
             </form>
           ) : null}
 
-          {draft?.mode === "MOCK_GROUNDED" ? (
+          {draft?.mode === "MOCK_GROUNDED" || draft?.mode === "AI_GROUNDED" ? (
             <section className="inbox-grounded-draft">
-              <header><div><span>Dorian style / reference only</span><h4>{draft.subject}</h4></div><strong>{draft.status.replaceAll("_", " ")}</strong></header>
+              <header><div><span>Dorian style / reference only</span><h4>{draft.approvedSubject ?? draft.subject}</h4></div><strong>{draft.status.replaceAll("_", " ")}</strong></header>
               <div className="inbox-grounding-evidence">
                 <p><b>Retrieval query</b>{classification.knowledgeQuery}</p>
                 <p><b>Grounding sources</b>{classification.knowledgeMatchCount}</p>
@@ -171,14 +185,29 @@ export function ClassificationPanel({
                   </article>
                 ))}
               </div>
-              <pre lang={draft.language}>{draft.body}</pre>
               {draft.status === "GENERATED" ? (
-                <form action={sendAction} className="inbox-confirm-send">
+                <>
+                  <details className="inbox-original-draft">
+                    <summary>View original AI draft</summary>
+                    <pre lang={draft.language}>{draft.body}</pre>
+                  </details>
+                  <form action={sendAction} className="inbox-draft-review">
                   <input name="draftId" type="hidden" value={draft.id} />
-                  <div><strong>Human confirmation required</strong><span>This only records a simulated send. No mailbox is connected.</span></div>
-                  <button disabled={sending} type="submit">{sending ? "Confirming…" : "Confirm & simulate send"}</button>
-                </form>
-              ) : <p className="inbox-complete-note">Human confirmed · Simulated sent · No real email delivered.</p>}
+                    <div><span>Human review</span><strong>Edit the final reply before confirmation</strong><p>The AI original remains unchanged for audit.</p></div>
+                    <label><span>Subject</span><input defaultValue={draft.subject} disabled={sending} maxLength={500} name="subject" required /></label>
+                    <label><span>Reply language</span><select defaultValue={draft.language} disabled={sending} name="language"><option value="fr">French</option><option value="en">English</option><option value="mixed">Mixed</option><option value="unknown">Unknown</option></select></label>
+                    <label><span>Final reply</span><textarea defaultValue={draft.body} disabled={sending} maxLength={20_000} name="body" required rows={9} /></label>
+                    <button disabled={sending} type="submit">{sending ? "Confirming…" : "Approve final text & simulate send"}</button>
+                    <small>No mailbox is connected. This stores the human-approved final text and a simulated-send timestamp.</small>
+                  </form>
+                </>
+              ) : (
+                <div className="inbox-approved-draft">
+                  <span>Human-approved final reply · {(draft.approvedLanguage ?? draft.language).toUpperCase()}</span>
+                  <pre lang={draft.approvedLanguage ?? draft.language}>{draft.approvedBody ?? draft.body}</pre>
+                  <p>Simulated sent · No real email delivered.</p>
+                </div>
+              )}
             </section>
           ) : null}
 
@@ -235,6 +264,31 @@ function ClassificationCorrectionForm({
 
 function ProcessingStep({ label, value, active }: { label: string; value: string; active: boolean }) {
   return <div className={active ? "is-active" : ""}><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function ProcessingOutcome({ status }: { status: string | null }) {
+  const outcome = processingOutcome(status);
+  if (!outcome) return null;
+
+  return (
+    <div className={`inbox-processing-outcome is-${outcome.tone}`} role="status">
+      <strong>{outcome.title}</strong>
+      <span>{outcome.detail}</span>
+    </div>
+  );
+}
+
+function processingOutcome(status: string | null) {
+  if (status === "WAITING_FOR_REVIEW") return { tone: "attention", title: "No draft generated", detail: "This classification needs a human decision before routing can continue." };
+  if (status === "NO_KNOWLEDGE") return { tone: "attention", title: "No grounded draft generated", detail: "No sufficiently relevant Active Knowledge was found. A human answer is required." };
+  if (status === "AWAITING_HUMAN_ANSWER") return { tone: "attention", title: "Human answer required", detail: "This route intentionally does not let AI invent an answer." };
+  if (status === "TECHNICAL_QUEUED") return { tone: "info", title: "Technical handoff ready", detail: "No email draft is created for this route. You can simulate forwarding it to Discord below." };
+  if (status === "DRAFT_READY") return { tone: "success", title: "Grounded reference draft ready", detail: "Review the retrieved evidence and draft below, then confirm a simulated send." };
+  if (status === "SIMULATED_SENT") return { tone: "success", title: "Simulated send complete", detail: "The human gate was confirmed. No real email was delivered." };
+  if (status === "SIMULATED_FORWARDED") return { tone: "success", title: "Simulated technical handoff complete", detail: "Discord was not contacted." };
+  if (status === "NO_ACTION") return { tone: "info", title: "No reply needed", detail: "Automatic routing determined that no response action should be created." };
+  if (status === "FAILED") return { tone: "error", title: "Processing stopped safely", detail: "Use the retry action below after checking the provider configuration." };
+  return null;
 }
 
 function preparationLabel(status: string | null) {

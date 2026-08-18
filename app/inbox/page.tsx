@@ -7,6 +7,7 @@ import {
   inboxStatusValues,
   parseInboxFilters,
 } from "@/lib/inbox/queue";
+import { getServerEnv } from "@/lib/env";
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -15,6 +16,7 @@ const statusLabels = { ALL: "All inbound", UNPROCESSED: "Unprocessed", NEEDS_ACT
 export default async function InboxPage({ searchParams }: PageProps) {
   const filters = parseInboxFilters(await searchParams);
   const data = await getMockInboxQueue(filters);
+  const { AI_PROVIDER } = getServerEnv();
 
   return (
     <main className="review-shell inbox-shell">
@@ -58,12 +60,12 @@ export default async function InboxPage({ searchParams }: PageProps) {
             <section className="inbox-timeline">
               {data.selected.messages.map((message) => {
                 const sender = message.participants.find((participant) => participant.type === "FROM");
-                return <article key={message.id}><header><div><span>{message.direction}</span><strong>{sender?.displayName || sender?.emailAddress || "Unknown sender"}</strong></div><time>{message.sentAt?.toLocaleString("en-CA") ?? "Unknown date"}</time></header><p lang={data.selected.language ?? undefined}>{message.cleanBody || message.normalizedBody}</p><footer><span>{message.attachments.length} attachment{message.attachments.length === 1 ? "" : "s"}</span><span>{message.parseWarnings.length} parse warning{message.parseWarnings.length === 1 ? "" : "s"}</span></footer></article>;
+                return <article key={message.id}><header><div><span>{message.direction}</span><strong>{sender?.displayName || sender?.emailAddress || "Unknown sender"}</strong></div><time>{message.sentAt?.toLocaleString("en-CA") ?? "Unknown date"}</time></header><p lang={data.selected?.language ?? undefined}>{message.cleanBody || message.normalizedBody}</p><footer><span>{message.attachments.length} attachment{message.attachments.length === 1 ? "" : "s"}</span><span>{message.parseWarnings.length} parse warning{message.parseWarnings.length === 1 ? "" : "s"}</span></footer></article>;
               })}
             </section>
-            <ClassificationPanel classification={data.selected.classification} key={data.selected.classification?.id ?? `empty-${data.selected.id}`} threadId={data.selected.id} />
+            <ClassificationPanel classification={data.selected.classification} key={data.selected.id} providerId={AI_PROVIDER} threadId={data.selected.id} />
           </article>
-        ) : <div className="inbox-empty"><h2>No inbound thread matches.</h2><p>Change the search text or classification filter.</p></div>}
+        ) : <div className="inbox-empty"><h2>{filters.selected ? "Selected thread is unavailable." : "No inbound thread matches."}</h2><p>{filters.selected ? "It may not be an inbound message or may be outside the current filter." : "Change the search text or classification filter."}</p>{filters.selected ? <Link href={inboxHref(filters, { selected: undefined })}>Open the first available thread</Link> : null}</div>}
       </section>
     </main>
   );

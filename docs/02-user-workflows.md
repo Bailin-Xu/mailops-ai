@@ -105,7 +105,7 @@ Classify and route an inquiry without blocking normal high-confidence work.
 7. For French input, the system preserves and displays the original French content.
 8. Confidence below `0.70` or an explicit `MANUAL_REVIEW` category enters `PENDING_REVIEW`.
 9. Other validated classifications enter `AUTO_ROUTED` and continue immediately.
-10. Technical issues enter the technical queue; unknown and other unsupported questions enter the human-answer queue; known questions search Active Knowledge.
+10. Technical issues enter the technical queue. High-confidence ordinary questions search Active Knowledge even when the classifier labels them unknown; unsupported questions fall back to the human-answer queue.
 
 ### Failure Handling
 
@@ -134,6 +134,10 @@ Resolve a blocked low-confidence result or correct an automatically routed resul
 
 **Rule:** high-confidence classification may drive routing, but it is never a sending decision. A human can correct it, and all real or simulated reply sending remains human-confirmed.
 
+Before simulated sending, the reviewer may edit the generated subject, reply
+body, and target language. The generated AI text remains unchanged; the edited
+final text is stored separately with its approval and simulated-send timestamps.
+
 ## 7. Search Approved Knowledge
 
 ### Goal
@@ -142,7 +146,7 @@ Find approved knowledge relevant to the reviewed inquiry.
 
 ### Main Flow
 
-1. For a high-confidence `KNOWN_QUESTION`, the system builds a compact query from question-like text in the latest inbound message and searches active knowledge using the effective category (human-corrected when present, otherwise the validated AI category).
+1. For a high-confidence `KNOWN_QUESTION` or `UNKNOWN_QUESTION`, the system builds a compact query from question-like text in the latest inbound message and searches active knowledge. Classification describes intent and risk; it does not claim that the model knows whether an approved answer exists.
 2. Results are ranked by keyword relevance, category, and language.
 3. A deterministic relevance gate requires at least two meaningful query terms in the canonical question itself. Answer text may improve ranking but cannot make a weak question match eligible; title-only or otherwise broad hits are not sufficient grounding.
 4. The first MVP draft uses only the strongest qualifying entry and displays that retrieval evidence; additional matches are not concatenated into the reply.

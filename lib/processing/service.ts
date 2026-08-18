@@ -4,6 +4,7 @@ import type {
 } from "@/generated/prisma/client";
 import {
   draftResultSchema,
+  type AIExecutionMetadata,
   type AIProvider,
 } from "@/lib/ai/provider";
 import { reviewClassification } from "@/lib/classification/service";
@@ -16,6 +17,12 @@ const manualAnswerSchema = z.object({
   classificationId: z.string().uuid(),
   body: z.string().trim().min(1).max(20_000),
   createCandidate: z.boolean().default(false),
+});
+const confirmedDraftSchema = z.object({
+  draftId: z.string().uuid(),
+  subject: z.string().trim().min(1).max(500),
+  body: z.string().trim().min(1).max(20_000),
+  language: z.enum(["en", "fr", "mixed", "unknown"]),
 });
 
 export async function runAutomaticProcessing(
@@ -39,16 +46,13 @@ export async function runAutomaticProcessing(
   if (category === "TECHNICAL_ISSUE") {
     return setRoute(classificationId, "TECHNICAL_QUEUE", "TECHNICAL_QUEUED", "Technical issues route to the technical queue.", db);
   }
-  if (category === "UNKNOWN_QUESTION") {
-    return setRoute(classificationId, "HUMAN_ANSWER_QUEUE", "AWAITING_HUMAN_ANSWER", "No known-answer claim is allowed for an unknown question.", db);
-  }
   if (category === "MANUAL_REVIEW") {
     return setRoute(classificationId, "MANUAL_REVIEW", "WAITING_FOR_REVIEW", "The classifier explicitly requested manual handling.", db);
   }
   if (category === "IRRELEVANT_SPAM") {
     return setRoute(classificationId, "NO_ACTION", "NO_ACTION", "Likely irrelevant or spam; no reply draft was created.", db);
   }
-  if (category !== "KNOWN_QUESTION") {
+  if (category !== "KNOWN_QUESTION" && category !== "UNKNOWN_QUESTION") {
     return setRoute(classificationId, "HUMAN_ANSWER_QUEUE", "AWAITING_HUMAN_ANSWER", "This category needs a human-authored answer in the MVP.", db);
   }
 
@@ -58,7 +62,9 @@ export async function runAutomaticProcessing(
     data: {
       route: "KNOWN_KNOWLEDGE",
       processingStatus: "SEARCHING_KNOWLEDGE",
-      routingReason: "Known questions search Active Knowledge automatically.",
+      routingReason: category === "KNOWN_QUESTION"
+        ? "Known questions search Active Knowledge automatically."
+        : "A low-risk question searches Active Knowledge before falling back to a human answer.",
       knowledgeQuery: query,
     },
   });
@@ -67,6 +73,7 @@ export async function runAutomaticProcessing(
     return db.classification.update({
       where: { id: classificationId },
       data: {
+        route: "HUMAN_ANSWER_QUEUE",
         processingStatus: "NO_KNOWLEDGE",
         knowledgeMatchCount: 0,
         routingReason: "No specific question terms were available for a safe knowledge search; a human answer is required.",
@@ -89,6 +96,7 @@ export async function runAutomaticProcessing(
     return db.classification.update({
       where: { id: classificationId },
       data: {
+        route: "HUMAN_ANSWER_QUEUE",
         processingStatus: "NO_KNOWLEDGE",
         knowledgeMatchCount: 0,
         routingReason: "No sufficiently relevant Active Knowledge matched; a human answer is required.",
@@ -112,15 +120,16 @@ export async function runAutomaticProcessing(
   }
 
   const validated = draftResultSchema.safeParse(output);
+  const executionMetadata = provider.getExecutionMetadata?.(output);
   if (!validated.success) {
     const errors = validated.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
-    await recordDraftFailure(classificationId, provider, "The provider returned an invalid draft.", errors, elapsed(startedAt), db);
+    await recordDraftFailure(classificationId, provider, "The provider returned an invalid draft.", errors, elapsed(startedAt), db, executionMetadata);
     throw new Error("Draft output failed validation.");
   }
 
   const allowedIds = new Set([groundingMatch.id]);
   if (validated.data.knowledgeSourceIds.some((id) => !allowedIds.has(id))) {
-    await recordDraftFailure(classificationId, provider, "The draft cited knowledge that was not supplied.", ["knowledgeSourceIds: contains an untrusted source"], elapsed(startedAt), db);
+    await recordDraftFailure(classificationId, provider, "The draft cited knowledge that was not supplied.", ["knowledgeSourceIds: contains an untrusted source"], elapsed(startedAt), db, executionMetadata);
     throw new Error("Draft output failed grounding validation.");
   }
 
@@ -133,10 +142,13 @@ export async function runAutomaticProcessing(
         promptVersion: provider.draftPromptVersion,
         status: "SUCCEEDED",
         latencyMs: elapsed(startedAt),
+        inputTokens: executionMetadata?.inputTokens,
+        outputTokens: executionMetadata?.outputTokens,
         inputMetadata: {
           classificationId,
           knowledgeSourceIds: validated.data.knowledgeSourceIds,
           style: "DORIAN_REFERENCE",
+          ...providerResponseMetadata(executionMetadata),
         },
         output: validated.data,
       },
@@ -150,7 +162,7 @@ export async function runAutomaticProcessing(
         body: validated.data.body,
         language: validated.data.language,
         style: "DORIAN_REFERENCE",
-        mode: "MOCK_GROUNDED",
+        mode: provider.id === "mock" ? "MOCK_GROUNDED" : "AI_GROUNDED",
         knowledgeSources: {
           create: [groundingMatch]
             .filter((match) => validated.data.knowledgeSourceIds.includes(match.id))
@@ -200,24 +212,30 @@ export async function correctAndResumeProcessing(
 }
 
 export async function confirmAndSimulateSend(
-  draftIdInput: unknown,
+  input: unknown,
   db: PrismaClient = getDb(),
 ) {
-  const draftId = idSchema.parse(draftIdInput);
-  const draft = await db.draft.findUnique({ where: { id: draftId } });
-  if (!draft || draft.status !== "GENERATED") throw new Error("This reference reply is no longer ready to send.");
+  const approved = confirmedDraftSchema.parse(input);
   const now = new Date();
   return db.$transaction(async (transaction) => {
-    const sent = await transaction.draft.update({
-      where: { id: draftId },
+    const draft = await transaction.draft.findUnique({ where: { id: approved.draftId } });
+    if (!draft || draft.status !== "GENERATED") {
+      throw new Error("This reference reply is no longer ready to send.");
+    }
+    const claimed = await transaction.draft.updateMany({
+      where: { id: approved.draftId, status: "GENERATED" },
       data: {
         status: "SIMULATED_SENT",
-        approvedSubject: draft.subject,
-        approvedBody: draft.body,
+        approvedSubject: approved.subject,
+        approvedBody: approved.body,
+        approvedLanguage: approved.language,
         approvedAt: now,
         simulatedSentAt: now,
       },
     });
+    if (claimed.count !== 1) {
+      throw new Error("This reference reply is no longer ready to send.");
+    }
     await transaction.classification.update({
       where: { id: draft.classificationId },
       data: { processingStatus: "SIMULATED_SENT" },
@@ -226,7 +244,7 @@ export async function confirmAndSimulateSend(
       where: { id: draft.threadId },
       data: { status: "SIMULATED_SENT" },
     });
-    return sent;
+    return transaction.draft.findUniqueOrThrow({ where: { id: approved.draftId } });
   });
 }
 
@@ -416,6 +434,7 @@ async function recordDraftFailure(
   validationErrors: string[],
   latencyMs: number,
   db: PrismaClient,
+  executionMetadata?: AIExecutionMetadata,
 ) {
   await db.$transaction([
     db.aIExecution.create({
@@ -426,7 +445,12 @@ async function recordDraftFailure(
         promptVersion: provider.draftPromptVersion,
         status: "FAILED",
         latencyMs,
-        inputMetadata: { classificationId },
+        inputTokens: executionMetadata?.inputTokens,
+        outputTokens: executionMetadata?.outputTokens,
+        inputMetadata: {
+          classificationId,
+          ...providerResponseMetadata(executionMetadata),
+        },
         validationErrors,
         errorMessage,
       },
@@ -440,4 +464,17 @@ async function recordDraftFailure(
 
 function elapsed(startedAt: number) {
   return Math.max(0, Math.round(performance.now() - startedAt));
+}
+
+function providerResponseMetadata(metadata?: AIExecutionMetadata) {
+  if (!metadata) return {};
+  return {
+    providerResponse: {
+      ...(metadata.totalTokens !== undefined ? { totalTokens: metadata.totalTokens } : {}),
+      ...(metadata.thoughtsTokens !== undefined ? { thoughtsTokens: metadata.thoughtsTokens } : {}),
+      ...(metadata.modelVersion ? { modelVersion: metadata.modelVersion } : {}),
+      ...(metadata.responseId ? { responseId: metadata.responseId } : {}),
+      ...(metadata.finishReason ? { finishReason: metadata.finishReason } : {}),
+    },
+  };
 }

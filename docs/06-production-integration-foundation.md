@@ -212,9 +212,11 @@ retention limits, and an explicit rule preventing automatic AI upload.
 
 ### Phase 2 — AI Shadow Mode
 
-- implement Gemini behind the existing `AIProvider`;
+- Gemini 3.5 Flash-Lite is implemented behind the existing `AIProvider` for
+  explicit local Shadow Mode actions;
 - build a safely redacted classification/draft evaluation set;
-- add structured bug extraction and token/cost capture;
+- token usage and provider response metadata are captured; structured bug
+  extraction and paid-cost calculation remain deferred;
 - keep real historical messages out of free-tier AI services;
 - compare Mock and Gemini without sending.
 

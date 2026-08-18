@@ -345,6 +345,7 @@ enum DraftStatus {
 
 enum DraftMode {
   MOCK_GROUNDED
+  AI_GROUNDED
   MANUAL
 }
 
@@ -361,6 +362,7 @@ model Draft {
   status           DraftStatus   @default(GENERATED)
   approvedSubject  String?
   approvedBody     String?
+  approvedLanguage String?
   approvedAt       DateTime?
   simulatedSentAt  DateTime?
   createdAt        DateTime      @default(now())

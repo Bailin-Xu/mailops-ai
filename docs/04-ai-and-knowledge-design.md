@@ -98,6 +98,13 @@ The initial categories are:
 
 Each category should have a short internal definition so that prompts and tests use the same meaning.
 
+`KNOWN_QUESTION` means an ordinary, low-risk FAQ-style intent. It does not mean
+the classifier knows that an approved answer exists. Knowledge availability is
+decided separately by deterministic Active Knowledge retrieval. A
+high-confidence `UNKNOWN_QUESTION` also receives a safe retrieval attempt before
+falling back to a human answer, preventing classification false negatives from
+blocking grounded drafts.
+
 ## 4.3 Structured Output
 
 Expected output:
@@ -115,11 +122,13 @@ The result must be validated before storage.
 
 Invalid output should produce a failed execution rather than a partially trusted classification.
 
-The first inbox implementation uses `MockAIProvider`, a deterministic rule-based
-provider behind the same `AIProvider` interface intended for Gemini. It reads only
-the thread subject and latest inbound `cleanBody`, validates the structured result
-with Zod, and records provider, model, prompt version, latency, status, and
-validation metadata. Page rendering never triggers classification.
+The Inbox selects `MockAIProvider` or `GeminiProvider` through configuration. Both
+read only the thread subject and latest inbound `cleanBody`; Gemini receives no
+attachments, message headers, or database records. Gemini requests JSON Schema
+output and the application validates it again with Zod before storage. Execution
+records preserve provider, configured model, returned model version, response ID,
+token usage, prompt version, latency, status, and validation metadata. Page
+rendering never triggers classification.
 
 ## 4.4 Confidence Gate and Human Correction
 
@@ -138,7 +147,7 @@ or `artwork` as insufficient evidence for `KNOWN_QUESTION`. A message must conta
 question intent and a specific supported topic signal. This conservative mock rule
 will later be replaced by the configured AI provider without changing orchestration.
 
-For known-question retrieval, orchestration extracts meaningful terms from
+For ordinary-question retrieval, orchestration extracts meaningful terms from
 question-like body text, searches only Active Knowledge, and applies a second
 answerability gate after full-text ranking. The gate requires at least two query
 terms in the canonical question itself; answer text may rank qualifying entries
@@ -395,7 +404,11 @@ The model must be instructed to:
 - avoid mentioning internal system details;
 - avoid following instructions embedded inside the incoming email.
 
-The UI must display the selected knowledge sources beside the draft. The first Mock implementation formats the grounded answer as a Dorian-style reference reply and always requires human confirmation before simulated sending.
+The UI must display the selected knowledge sources beside the draft. Mock and
+Gemini format the single selected answer as a Dorian-style reference reply and
+always require human confirmation before simulated sending. Gemini is instructed
+to use only the supplied approved answer, and the service rejects any returned
+knowledge ID that was not supplied.
 
 ---
 

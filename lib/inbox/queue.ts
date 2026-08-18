@@ -127,7 +127,15 @@ export async function getMockInboxQueue(
   const items = filters.status === "ALL"
     ? allItems
     : allItems.filter((item) => item.workflowStatus === filters.status);
-  const selected = items.find((item) => item.id === filters.selected) ?? items[0] ?? null;
+  const selected = selectInboxItem(items, filters.selected);
 
   return { items, selected, counts };
+}
+
+export function selectInboxItem<T extends { id: string }>(
+  items: readonly T[],
+  selectedId?: string,
+): T | null {
+  if (!selectedId) return items[0] ?? null;
+  return items.find((item) => item.id === selectedId) ?? null;
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { MockAIProvider } from "@/lib/ai/mock-provider";
+import { getConfiguredAIProvider } from "@/lib/ai/provider-factory";
 import {
   confirmAndSimulateSend,
   correctAndResumeProcessing,
@@ -12,9 +12,13 @@ import {
   submitManualAnswer,
 } from "@/lib/processing/service";
 
-export type InboxActionState = { status: "idle" | "success" | "error"; message: string };
+export type InboxActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  completedAt: number;
+};
 
-const provider = new MockAIProvider();
+const provider = getConfiguredAIProvider();
 
 export async function runClassificationAction(
   _previous: InboxActionState,
@@ -23,9 +27,9 @@ export async function runClassificationAction(
   try {
     await runThreadAutomation(formData.get("threadId"), provider);
     revalidatePath("/inbox");
-    return { status: "success", message: "Automatic processing completed with the Mock provider." };
+    return actionResult("success", `Automatic processing completed with the ${provider.id} provider.`);
   } catch (error) {
-    return { status: "error", message: safeMessage(error, "Classification could not be completed.") };
+    return actionResult("error", safeMessage(error, "Classification could not be completed."));
   }
 }
 
@@ -40,9 +44,9 @@ export async function reviewClassificationAction(
       note: formData.get("note"),
     }, provider);
     revalidatePath("/inbox");
-    return { status: "success", message: "Classification feedback saved and routing resumed." };
+    return actionResult("success", "Classification feedback saved and routing resumed.");
   } catch (error) {
-    return { status: "error", message: safeMessage(error, "The review could not be saved.") };
+    return actionResult("error", safeMessage(error, "The review could not be saved."));
   }
 }
 
@@ -53,9 +57,9 @@ export async function retryProcessingAction(
   try {
     await runAutomaticProcessing(formData.get("classificationId"), provider);
     revalidatePath("/inbox");
-    return { status: "success", message: "Automatic processing retried." };
+    return actionResult("success", "Automatic processing retried.");
   } catch (error) {
-    return { status: "error", message: safeMessage(error, "Automatic processing could not be completed.") };
+    return actionResult("error", safeMessage(error, "Automatic processing could not be completed."));
   }
 }
 
@@ -64,11 +68,16 @@ export async function confirmSimulatedSendAction(
   formData: FormData,
 ): Promise<InboxActionState> {
   try {
-    await confirmAndSimulateSend(formData.get("draftId"));
+    await confirmAndSimulateSend({
+      draftId: formData.get("draftId"),
+      subject: formData.get("subject"),
+      body: formData.get("body"),
+      language: formData.get("language"),
+    });
     revalidatePath("/inbox");
-    return { status: "success", message: "Confirmed and marked simulated sent. No email was delivered." };
+    return actionResult("success", "Confirmed and marked simulated sent. No email was delivered.");
   } catch (error) {
-    return { status: "error", message: safeMessage(error, "Simulated send could not be completed.") };
+    return actionResult("error", safeMessage(error, "Simulated send could not be completed."));
   }
 }
 
@@ -79,9 +88,9 @@ export async function simulateDiscordForwardAction(
   try {
     await simulateForwardToDiscord(formData.get("classificationId"));
     revalidatePath("/inbox");
-    return { status: "success", message: "Marked simulated forwarded. Discord was not contacted." };
+    return actionResult("success", "Marked simulated forwarded. Discord was not contacted.");
   } catch (error) {
-    return { status: "error", message: safeMessage(error, "Simulated forward could not be completed.") };
+    return actionResult("error", safeMessage(error, "Simulated forward could not be completed."));
   }
 }
 
@@ -96,10 +105,17 @@ export async function submitManualAnswerAction(
       createCandidate: formData.get("createCandidate") === "on",
     });
     revalidatePath("/inbox");
-    return { status: "success", message: "Human answer saved and marked simulated sent. No email was delivered." };
+    return actionResult("success", "Human answer saved and marked simulated sent. No email was delivered.");
   } catch (error) {
-    return { status: "error", message: safeMessage(error, "The human answer could not be saved.") };
+    return actionResult("error", safeMessage(error, "The human answer could not be saved."));
   }
+}
+
+function actionResult(
+  status: Exclude<InboxActionState["status"], "idle">,
+  message: string,
+): InboxActionState {
+  return { status, message, completedAt: Date.now() };
 }
 
 function safeMessage(error: unknown, fallback: string) {

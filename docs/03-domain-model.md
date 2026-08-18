@@ -414,6 +414,7 @@ Represents one generated or manually edited reply draft.
 - `status`
 - `approvedSubject`
 - `approvedBody`
+- `approvedLanguage`
 - `approvedAt`
 - `simulatedSentAt`
 - `createdAt`
