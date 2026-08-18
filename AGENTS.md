@@ -17,7 +17,7 @@ Focus only on:
 - `.eml` import and parsing;
 - mock inbox and thread reconstruction;
 - Gemini and mock AI providers;
-- human-reviewed classification;
+- confidence-gated automatic classification with human correction;
 - approved knowledge management;
 - grounded draft generation;
 - simulated sending;
@@ -118,9 +118,9 @@ If a task appears to require one of these, explain the dependency before proceed
 1. AI output must use structured schemas.
 2. Validate every AI result before storage.
 3. Invalid output must become a failed execution.
-4. All AI classifications require human review.
+4. Low-confidence or explicitly manual classifications require human review; high-confidence classifications may continue automatically but remain correctable.
 5. Preserve original French content.
-6. French emails must provide an English reviewer summary.
+6. Preserve original French content; translated reviewer summaries are deferred until the bilingual interface is designed.
 7. Drafts should use the email's primary language unless changed.
 8. Known-question drafts must use active approved knowledge.
 9. When no relevant knowledge exists, do not claim the answer is known.

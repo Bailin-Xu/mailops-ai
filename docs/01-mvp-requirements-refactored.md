@@ -29,8 +29,8 @@ The MVP is a local, single-user system that:
 - Basic thread reconstruction
 - Mock inbox
 - Gemini-based classification
-- English summaries for French emails
-- Human classification review
+- Original English and French email content preservation
+- Confidence-gated classification and human correction
 - Knowledge candidate workflow
 - Approved knowledge base
 - Keyword and PostgreSQL text search
@@ -334,7 +334,6 @@ The thread page shall display:
 - current classification;
 - AI confidence;
 - detected language;
-- English summary when needed;
 - human review result;
 - linked knowledge;
 - current draft;
@@ -386,7 +385,6 @@ Classification output shall include:
   "category": "TECHNICAL_ISSUE",
   "confidence": 0.92,
   "language": "fr",
-  "summary": "The sender cannot upload a media file.",
   "requiresHumanReview": true
 }
 ```
@@ -397,15 +395,14 @@ The system shall validate all model output before storing it.
 
 Invalid output shall not replace an existing valid classification.
 
-### AIR-013 — Require human review
+### AIR-013 — Gate classification review by confidence
 
-Every AI classification shall require human review in the MVP.
+Validated classifications with confidence at or above `0.70` shall continue to automatic routing unless the category is `MANUAL_REVIEW`. Lower-confidence classifications shall block for human review. Automatically routed classifications remain correctable.
 
-The user shall be able to:
+For blocked or incorrect classifications, the user shall be able to:
 
 - accept the classification;
 - change the category;
-- edit the summary;
 - add an optional correction note.
 
 ### AIR-014 — Preserve AI and human results
@@ -413,12 +410,12 @@ The user shall be able to:
 The system shall preserve:
 
 - original AI category;
-- original AI summary;
 - confidence;
 - final reviewed category;
-- final reviewed summary;
 - review timestamp;
 - whether the result changed.
+- the automatic route and routing reason;
+- correction feedback without overwriting the original AI category.
 
 ### AIR-015 — Support retries
 
@@ -437,11 +434,11 @@ The system shall identify the primary language as:
 - `mixed`;
 - `unknown`.
 
-### AIR-021 — Produce English summary for French emails
+### AIR-021 — Preserve original-language content
 
-For French emails, the system shall provide an English summary for the reviewer.
+The MVP shall keep the original English or French content visible during review.
 
-The original French content shall remain unchanged and visible.
+Translated reviewer summaries are deferred until the bilingual interface is designed.
 
 ### AIR-022 — Preserve response language
 
@@ -486,6 +483,14 @@ The user shall be able to approve or reject a candidate.
 ### KBR-005 — Preserve source traceability
 
 Approved and rejected candidates shall retain links to their source thread and messages.
+
+### KBR-006 — Restrict historical source direction
+
+Only historical email marked `OUTBOUND` and `READY_FOR_REVIEW` may be used to
+create a knowledge candidate. `INBOUND`, `SELF`, `UNKNOWN`, and prescreened
+`EXCLUDED` messages shall be blocked with traceable exclusion reasons.
+`NEEDS_REVIEW` messages remain blocked until a human resolves their source
+eligibility.
 
 ## 6.2 Approved Knowledge
 
@@ -562,9 +567,15 @@ Vector search is excluded from the MVP.
 
 ## 7.1 Draft Generation
 
-### FR-070 — Generate grounded draft
+### FR-070 — Generate grounded reference draft automatically
 
-The user shall be able to generate a reply draft after classification review.
+For a high-confidence or human-corrected known question, the system shall automatically retrieve Active Knowledge and generate a grounded Dorian-style reference reply.
+
+The MVP shall build retrieval queries from question-like body text, reject broad
+or title-only matches with a deterministic relevance gate, and ground the initial
+automatic draft in only the strongest qualifying Active Knowledge entry. If no
+entry passes the gate, the system shall require a human-authored answer instead of
+generating a draft.
 
 ### FR-071 — Use approved knowledge
 
@@ -628,7 +639,7 @@ The exact approved subject and body shall be stored.
 
 ### FR-080 — Simulate send
 
-An approved draft may be marked as simulated sent.
+A human shall be able to confirm a generated reference draft and mark it simulated sent in one action.
 
 ### FR-081 — Never send real email
 
@@ -659,7 +670,6 @@ Each AI operation shall create an execution record.
 Initial task types:
 
 - classification;
-- English summary;
 - knowledge candidate generation;
 - draft generation.
 
@@ -726,7 +736,6 @@ Core pages shall provide:
 The thread detail page shall show:
 
 - original French content;
-- English summary;
 - reviewed category;
 - draft in the selected language.
 
@@ -851,27 +860,27 @@ The MVP is complete when all mandatory conditions below are met.
 
 ## Inbox and threads
 
-- [ ] Imported threads appear in the inbox.
-- [ ] Search and filtering work.
-- [ ] Thread detail displays all messages.
+- [x] Imported threads appear in the inbox.
+- [x] Search and filtering work.
+- [x] Thread detail displays all messages.
 - [ ] Reply metadata links related messages.
 - [ ] Incomplete-thread warnings are visible.
 
 ## Classification
 
 - [ ] Gemini can classify synthetic English and French emails.
-- [ ] Mock classification works without an API key.
-- [ ] AI output is schema-validated.
-- [ ] French emails receive an English summary.
-- [ ] The user can review and correct classifications.
-- [ ] Original AI and final human results are preserved.
+- [x] Mock classification works without an API key.
+- [x] AI output is schema-validated.
+- [x] French source content remains unchanged and visible.
+- [x] The user can review and correct classifications.
+- [x] Original AI and final human results are preserved.
 
 ## Knowledge
 
 - [ ] A candidate can be created from a reviewed thread.
 - [ ] A candidate can be edited, approved, or rejected.
-- [ ] Approved knowledge can be searched.
-- [ ] Inactive knowledge is excluded from retrieval.
+- [x] Approved knowledge can be searched.
+- [x] Inactive knowledge is excluded from retrieval.
 - [ ] Source traceability is visible.
 
 ## Drafts
@@ -906,11 +915,11 @@ The MVP is complete when all mandatory conditions below are met.
 8. AI provider abstraction
 9. Mock AI provider
 10. Gemini classification
-11. Human classification review
+11. Confidence-gated automatic routing and human correction
 12. Knowledge candidate workflow
-13. Approved knowledge search
-14. Grounded draft generation
-15. Draft review and simulated sending
+13. Automatic Active Knowledge search
+14. Grounded Dorian-style reference generation
+15. Human confirmation and simulated sending
 16. AI execution history
 17. End-to-end tests
 18. Public demo polish

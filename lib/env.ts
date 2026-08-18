@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const booleanEnv = (defaultValue: boolean) => z
+  .enum(["true", "false"])
+  .default(defaultValue ? "true" : "false")
+  .transform((value) => value === "true");
+
 const serverEnvSchema = z
   .object({
     DATABASE_URL: z
@@ -16,9 +21,45 @@ const serverEnvSchema = z
     AI_PROVIDER: z.enum(["mock", "gemini"]).default("mock"),
     GEMINI_API_KEY: z.string().optional(),
     GEMINI_MODEL: z.string().optional(),
+    SHADOW_MODE: booleanEnv(true),
+    EXTERNAL_DELIVERY_ENABLED: booleanEnv(false),
+    AUTO_REPLY_MIN_CONFIDENCE: z.coerce.number().min(0.7).max(1).default(0.9),
     EMAIL_IMPORT_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+    MAILOPS_OWNED_EMAIL_ADDRESSES: z
+      .string()
+      .default("")
+      .transform((value, context) => {
+        const addresses = [
+          ...new Set(
+            value
+              .split(",")
+              .map((address) => address.trim().toLowerCase())
+              .filter(Boolean),
+          ),
+        ];
+
+        for (const address of addresses) {
+          if (!z.email().safeParse(address).success) {
+            context.addIssue({
+              code: "custom",
+              message: `Invalid owned email address: ${address}`,
+            });
+            return z.NEVER;
+          }
+        }
+
+        return addresses;
+      }),
   })
   .superRefine((env, context) => {
+    if (env.EXTERNAL_DELIVERY_ENABLED && env.SHADOW_MODE) {
+      context.addIssue({
+        code: "custom",
+        path: ["EXTERNAL_DELIVERY_ENABLED"],
+        message: "EXTERNAL_DELIVERY_ENABLED cannot be true while SHADOW_MODE is true",
+      });
+    }
+
     if (env.AI_PROVIDER !== "gemini") {
       return;
     }

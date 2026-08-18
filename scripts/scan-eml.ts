@@ -17,6 +17,7 @@ async function main() {
     parsedWithWarnings: 0,
     failed: 0,
     attachmentMetadataRecords: 0,
+    messagesWithC1Controls: 0,
     warningCounts: {} as Record<string, number>,
     failureCounts: {} as Record<string, number>,
   };
@@ -34,6 +35,9 @@ async function main() {
 
       summary.parsed += 1;
       summary.attachmentMetadataRecords += result.email.attachments.length;
+      if (containsC1Controls(result.email)) {
+        summary.messagesWithC1Controls += 1;
+      }
 
       if (result.email.parseStatus === "PARSED_WITH_WARNINGS") {
         summary.parsedWithWarnings += 1;
@@ -55,4 +59,24 @@ void main().catch(() => {
 
 function increment(counts: Record<string, number>, key: string) {
   counts[key] = (counts[key] ?? 0) + 1;
+}
+
+function containsC1Controls(email: {
+  subject: string;
+  textBody: string | null;
+  htmlBody: string | null;
+  normalizedBody: string;
+  participants: Array<{ displayName: string | null }>;
+  attachments: Array<{ fileName: string | null }>;
+}) {
+  const values = [
+    email.subject,
+    email.textBody,
+    email.htmlBody,
+    email.normalizedBody,
+    ...email.participants.map((participant) => participant.displayName),
+    ...email.attachments.map((attachment) => attachment.fileName),
+  ];
+
+  return values.some((value) => value !== null && /[\u0080-\u009f]/.test(value));
 }

@@ -12,34 +12,586 @@ model EmailThread {
   subject           String
   normalizedSubject String
   status            String         @default("NEW")
+  automationState   AutomationState @default(RECEIVED)
   language          String?
+  artistId          String?
+  wordpressId       String?
+  artistEmail       String?
   isIncomplete      Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   messages          EmailMessage[]
+  classifications   Classification[]
+  drafts            Draft[]
+  bugTickets         BugTicket[]
+  replyDispatches    ReplyDispatch[]
 
   @@index([status])
+  @@index([automationState])
+  @@index([artistId])
+  @@index([wordpressId])
+  @@index([artistEmail])
   @@index([createdAt])
 }
 
 model EmailMessage {
-  id             String      @id @default(uuid()) @db.Uuid
-  threadId       String      @db.Uuid
-  messageId      String?     @unique
-  inReplyTo      String?
-  references     String[]    @default([])
-  subject        String
-  sentAt         DateTime?
-  textBody       String?
-  htmlBody       String?
-  normalizedBody String
-  sourceFileName String
-  fingerprint    String      @unique
-  parseStatus    String      @default("PARSED")
-  parseWarnings  String[]    @default([])
-  createdAt      DateTime    @default(now())
-  thread         EmailThread @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  id                        String                       @id @default(uuid()) @db.Uuid
+  threadId                  String                       @db.Uuid
+  messageId                 String?                      @unique
+  sourceProvider            ExternalEmailProvider        @default(EML_IMPORT)
+  externalMessageId         String?
+  externalThreadId          String?
+  providerHistoryId         String?
+  inReplyTo                 String?
+  references                String[]                     @default([])
+  subject                   String
+  sentAt                    DateTime?
+  textBody                  String?
+  htmlBody                  String?
+  normalizedBody            String
+  cleanBody                 String                       @default("")
+  quotedContext             String?
+  direction                 EmailDirection               @default(UNKNOWN)
+  knowledgeSourceStatus     KnowledgeSourceStatus        @default(UNASSESSED)
+  knowledgeExclusionReasons String[]                     @default([])
+  knowledgeReviewStatus     KnowledgeReviewStatus        @default(PENDING)
+  knowledgeReviewNote       String?
+  knowledgeReviewedAt       DateTime?
+  sourceFileName            String
+  fingerprint               String                       @unique
+  parseStatus               String                       @default("PARSED")
+  parseWarnings             String[]                     @default([])
+  createdAt                 DateTime                     @default(now())
+  thread                    EmailThread                  @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  participants              EmailParticipant[]
+  attachments               AttachmentMetadata[]
+  knowledgeReviewEvents     KnowledgeSourceReviewEvent[]
+  knowledgeCandidateSources KnowledgeCandidateSource[]
 
   @@index([threadId, sentAt])
+  @@unique([sourceProvider, externalMessageId])
+  @@index([sourceProvider, externalThreadId])
   @@index([sentAt])
+  @@index([direction])
+  @@index([knowledgeSourceStatus])
+  @@index([knowledgeReviewStatus])
+}
+
+enum ExternalEmailProvider {
+  EML_IMPORT
+  GMAIL
+}
+
+enum AutomationState {
+  RECEIVED
+  CLASSIFIED
+  AWAITING_HUMAN
+  REPLY_SCHEDULED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum KnowledgeSourceStatus {
+  UNASSESSED
+  READY_FOR_REVIEW
+  NEEDS_REVIEW
+  EXCLUDED
+}
+
+enum KnowledgeReviewStatus {
+  PENDING
+  APPROVED
+  NEEDS_FOLLOW_UP
+  REJECTED
+}
+
+model KnowledgeSourceReviewEvent {
+  id        String                @id @default(uuid()) @db.Uuid
+  messageId String                @db.Uuid
+  decision  KnowledgeReviewStatus
+  note      String?
+  createdAt DateTime              @default(now())
+  message   EmailMessage          @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, createdAt])
+  @@index([decision])
+}
+
+enum ClassificationCategory {
+  KNOWN_QUESTION
+  TECHNICAL_ISSUE
+  ACCOUNT_ACCESS
+  PAYMENT_ADMINISTRATIVE
+  BUSINESS_PARTNERSHIP
+  UNKNOWN_QUESTION
+  IRRELEVANT_SPAM
+  MANUAL_REVIEW
+}
+
+enum ClassificationReviewStatus {
+  PENDING
+  AUTO_ROUTED
+  ACCEPTED
+  CORRECTED
+}
+
+enum ProcessingRoute {
+  KNOWN_KNOWLEDGE
+  TECHNICAL_QUEUE
+  HUMAN_ANSWER_QUEUE
+  MANUAL_REVIEW
+  NO_ACTION
+}
+
+enum ProcessingStatus {
+  WAITING_FOR_REVIEW
+  SEARCHING_KNOWLEDGE
+  DRAFT_READY
+  NO_KNOWLEDGE
+  AWAITING_HUMAN_ANSWER
+  TECHNICAL_QUEUED
+  NO_ACTION
+  FAILED
+  SIMULATED_FORWARDED
+  SIMULATED_SENT
+}
+
+enum AIExecutionStatus {
+  SUCCEEDED
+  FAILED
+}
+
+model AIExecution {
+  id               String            @id @default(uuid()) @db.Uuid
+  taskType         String
+  provider         String
+  model            String
+  promptVersion    String
+  status           AIExecutionStatus
+  latencyMs        Int
+  inputTokens      Int?
+  outputTokens     Int?
+  costMicros       BigInt?
+  inputMetadata    Json
+  output           Json?
+  validationErrors String[]          @default([])
+  errorMessage     String?
+  createdAt        DateTime          @default(now())
+  classification   Classification?
+  draft            Draft?
+
+  @@index([taskType, createdAt])
+  @@index([provider, status])
+}
+
+model Classification {
+  id                  String                     @id @default(uuid()) @db.Uuid
+  threadId            String                     @db.Uuid
+  aiExecutionId       String                     @unique @db.Uuid
+  aiCategory          ClassificationCategory
+  aiConfidence        Float
+  aiLanguage          String
+  requiresHumanReview Boolean                    @default(true)
+  reviewedCategory    ClassificationCategory?
+  correctionNote      String?
+  reviewStatus        ClassificationReviewStatus @default(PENDING)
+  reviewedAt          DateTime?
+  route               ProcessingRoute?
+  processingStatus    ProcessingStatus?
+  routingReason       String?
+  knowledgeQuery      String?
+  knowledgeMatchCount Int                        @default(0)
+  simulatedForwardedAt DateTime?
+  createdAt           DateTime                   @default(now())
+  thread              EmailThread                @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  aiExecution         AIExecution                @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
+  drafts              Draft[]
+  bugTicket           BugTicket?
+
+  @@index([threadId, createdAt])
+  @@index([reviewStatus])
+  @@index([aiCategory])
+  @@index([aiLanguage])
+  @@index([route, processingStatus])
+}
+
+model WebsiteSource {
+  id               String                     @id @default(uuid()) @db.Uuid
+  url              String                     @unique
+  title            String
+  language         String
+  capturedAt       DateTime
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  evidence         WebsiteKnowledgeEvidence[]
+  candidateSources KnowledgeCandidateSource[]
+
+  @@index([language])
+}
+
+enum KnowledgeCandidateStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum KnowledgeCandidateSourceType {
+  EMAIL
+  WEBSITE
+}
+
+enum KnowledgeEntryStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+model KnowledgeCandidate {
+  id                String                          @id @default(uuid()) @db.Uuid
+  fingerprint       String                          @unique
+  title             String
+  canonicalQuestion String
+  proposedAnswer    String
+  category          String
+  language          String
+  status            KnowledgeCandidateStatus        @default(PENDING_REVIEW)
+  reviewedTitle     String?
+  reviewedQuestion  String?
+  reviewedAnswer    String?
+  reviewedCategory  String?
+  reviewedLanguage  String?
+  reviewNote        String?
+  reviewedAt        DateTime?
+  parentCandidateId String?                         @db.Uuid
+  createdAt         DateTime                        @default(now())
+  updatedAt         DateTime                        @updatedAt
+  sources           KnowledgeCandidateSource[]
+  reviewEvents      KnowledgeCandidateReviewEvent[]
+  knowledgeEntry    KnowledgeEntry?
+  parentCandidate   KnowledgeCandidate?             @relation("CandidateSplits", fields: [parentCandidateId], references: [id], onDelete: Restrict)
+  splitCandidates   KnowledgeCandidate[]            @relation("CandidateSplits")
+
+  @@index([status])
+  @@index([category])
+  @@index([language])
+  @@index([parentCandidateId])
+}
+
+model KnowledgeCandidateSource {
+  id              String                       @id @default(uuid()) @db.Uuid
+  sourceKey       String                       @unique
+  candidateId     String                       @db.Uuid
+  sourceType      KnowledgeCandidateSourceType
+  emailMessageId  String?                      @db.Uuid
+  websiteSourceId String?                      @db.Uuid
+  sourceLabel     String
+  sourceExcerpt   String
+  createdAt       DateTime                     @default(now())
+  candidate       KnowledgeCandidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  emailMessage    EmailMessage?                @relation(fields: [emailMessageId], references: [id], onDelete: Restrict)
+  websiteSource   WebsiteSource?               @relation(fields: [websiteSourceId], references: [id], onDelete: Restrict)
+
+  @@index([candidateId])
+  @@index([sourceType])
+  @@index([emailMessageId])
+  @@index([websiteSourceId])
+}
+
+model KnowledgeCandidateReviewEvent {
+  id               String                   @id @default(uuid()) @db.Uuid
+  candidateId      String                   @db.Uuid
+  decision         KnowledgeCandidateStatus
+  reviewedTitle    String?
+  reviewedQuestion String?
+  reviewedAnswer   String?
+  reviewedCategory String?
+  reviewedLanguage String?
+  note             String?
+  createdAt        DateTime                 @default(now())
+  candidate        KnowledgeCandidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, createdAt])
+  @@index([decision])
+}
+
+model KnowledgeEntry {
+  id                String               @id @default(uuid()) @db.Uuid
+  sourceCandidateId String               @unique @db.Uuid
+  title             String
+  canonicalQuestion String
+  answer            String
+  category          String
+  language          String
+  status            KnowledgeEntryStatus @default(ACTIVE)
+  approvedAt        DateTime
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  sourceCandidate   KnowledgeCandidate   @relation(fields: [sourceCandidateId], references: [id], onDelete: Restrict)
+  draftSources      DraftKnowledgeSource[]
+
+  @@index([status])
+  @@index([category])
+  @@index([language])
+}
+
+enum DraftStatus {
+  GENERATED
+  SUPERSEDED
+  SIMULATED_SENT
+}
+
+enum DraftMode {
+  MOCK_GROUNDED
+  MANUAL
+}
+
+model Draft {
+  id               String        @id @default(uuid()) @db.Uuid
+  threadId         String        @db.Uuid
+  classificationId String        @db.Uuid
+  aiExecutionId    String?       @unique @db.Uuid
+  subject          String
+  body             String
+  language         String
+  style            String
+  mode             DraftMode
+  status           DraftStatus   @default(GENERATED)
+  approvedSubject  String?
+  approvedBody     String?
+  approvedAt       DateTime?
+  simulatedSentAt  DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  thread           EmailThread   @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  classification   Classification @relation(fields: [classificationId], references: [id], onDelete: Restrict)
+  aiExecution      AIExecution?  @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
+  knowledgeSources DraftKnowledgeSource[]
+  replyDispatch    ReplyDispatch?
+
+  @@index([threadId, createdAt])
+  @@index([classificationId, createdAt])
+  @@index([status])
+}
+
+enum ReplyDispatchState {
+  REPLY_SCHEDULED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ReplyApprovalMode {
+  HUMAN_CONFIRMED
+  AUTO_LOW_RISK
+}
+
+enum ReplyDeliveryProvider {
+  SIMULATED
+  GMAIL
+}
+
+model ReplyDispatch {
+  id                String                @id @default(uuid()) @db.Uuid
+  threadId          String                @db.Uuid
+  draftId           String                @unique @db.Uuid
+  provider          ReplyDeliveryProvider @default(SIMULATED)
+  approvalMode      ReplyApprovalMode
+  state             ReplyDispatchState    @default(REPLY_SCHEDULED)
+  delayAt           DateTime
+  nextAttemptAt     DateTime
+  idempotencyKey    String                @unique
+  attemptCount      Int                   @default(0)
+  maxAttempts       Int                   @default(3)
+  lockedAt          DateTime?
+  lockedBy          String?
+  lastAttemptAt     DateTime?
+  lastErrorCode     String?
+  externalMessageId String?
+  sentAt            DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  thread            EmailThread           @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  draft             Draft                 @relation(fields: [draftId], references: [id], onDelete: Restrict)
+
+  @@index([state, nextAttemptAt])
+  @@index([threadId, createdAt])
+  @@index([lockedAt])
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugTicketStatus {
+  RECEIVED
+  QUEUED
+  CLAIMED
+  AWAITING_REPORTER
+  RESOLVED
+  FAILED
+  CANCELLED
+}
+
+model BugTicket {
+  id                          String          @id @default(uuid()) @db.Uuid
+  threadId                    String          @db.Uuid
+  classificationId            String          @unique @db.Uuid
+  summary                     String
+  page                        String?
+  reproductionSteps           String[]        @default([])
+  severity                    BugSeverity
+  artistId                    String?
+  wordpressId                 String?
+  artistEmail                 String?
+  status                      BugTicketStatus @default(RECEIVED)
+  assignedDeveloperExternalId String?
+  discordMessageId            String?
+  developerReply              String?
+  replySubmittedAt            DateTime?
+  claimedAt                   DateTime?
+  resolvedAt                  DateTime?
+  createdAt                   DateTime        @default(now())
+  updatedAt                   DateTime        @updatedAt
+  thread                      EmailThread     @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  classification              Classification  @relation(fields: [classificationId], references: [id], onDelete: Restrict)
+
+  @@index([status, severity])
+  @@index([threadId, createdAt])
+  @@index([artistId])
+  @@index([wordpressId])
+  @@index([artistEmail])
+}
+
+model SafetyControl {
+  id                       String   @id
+  shadowMode               Boolean  @default(true)
+  externalDeliveryEnabled  Boolean  @default(false)
+  reason                   String?
+  updatedAt                DateTime @updatedAt
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  eventType  String
+  entityType String
+  entityId   String
+  metadata   Json
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+model DraftKnowledgeSource {
+  draftId          String         @db.Uuid
+  knowledgeEntryId String         @db.Uuid
+  rank             Int
+  relevanceScore   Float
+  draft            Draft          @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  knowledgeEntry   KnowledgeEntry @relation(fields: [knowledgeEntryId], references: [id], onDelete: Restrict)
+
+  @@id([draftId, knowledgeEntryId])
+  @@index([knowledgeEntryId])
+}
+
+model WebsiteKnowledgeReviewItem {
+  id               String                        @id @default(uuid()) @db.Uuid
+  key              String                        @unique
+  title            String
+  questionForOwner String
+  language         String                        @default("fr")
+  status           WebsiteKnowledgeReviewStatus  @default(PENDING)
+  confirmedAnswer  String?
+  reviewNote       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+  evidence         WebsiteKnowledgeEvidence[]
+  reviewEvents     WebsiteKnowledgeReviewEvent[]
+
+  @@index([status])
+  @@index([language])
+}
+
+enum WebsiteKnowledgeReviewStatus {
+  PENDING
+  CONFIRMED
+  NEEDS_FOLLOW_UP
+  REJECTED
+}
+
+model WebsiteKnowledgeEvidence {
+  id             String                     @id @default(uuid()) @db.Uuid
+  evidenceKey    String                     @unique
+  reviewItemId   String                     @db.Uuid
+  sourceId       String                     @db.Uuid
+  sectionHeading String?
+  claim          String
+  createdAt      DateTime                   @default(now())
+  reviewItem     WebsiteKnowledgeReviewItem @relation(fields: [reviewItemId], references: [id], onDelete: Cascade)
+  source         WebsiteSource              @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([reviewItemId])
+  @@index([sourceId])
+}
+
+model WebsiteKnowledgeReviewEvent {
+  id              String                       @id @default(uuid()) @db.Uuid
+  reviewItemId    String                       @db.Uuid
+  decision        WebsiteKnowledgeReviewStatus
+  confirmedAnswer String?
+  note            String?
+  createdAt       DateTime                     @default(now())
+  reviewItem      WebsiteKnowledgeReviewItem   @relation(fields: [reviewItemId], references: [id], onDelete: Cascade)
+
+  @@index([reviewItemId, createdAt])
+  @@index([decision])
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+  SELF
+  UNKNOWN
+}
+
+enum EmailParticipantType {
+  FROM
+  TO
+  CC
+  BCC
+  REPLY_TO
+}
+
+model EmailParticipant {
+  id                String               @id @default(uuid()) @db.Uuid
+  messageId         String               @db.Uuid
+  type              EmailParticipantType
+  displayName       String?
+  emailAddress      String
+  normalizedAddress String
+  message           EmailMessage         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, type])
+  @@index([normalizedAddress])
+}
+
+model AttachmentMetadata {
+  id        String       @id @default(uuid()) @db.Uuid
+  messageId String       @db.Uuid
+  fileName  String?
+  mimeType  String
+  sizeBytes Int
+  contentId String?
+  isInline  Boolean      @default(false)
+  message   EmailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }

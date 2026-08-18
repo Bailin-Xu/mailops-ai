@@ -28,6 +28,18 @@ Reviewed Email or Thread
 → Approved Knowledge Base
 ```
 
+A public-website workflow resolves contradictory claims before candidate
+creation:
+
+```text
+Allowlisted Website Evidence
+→ Detect or Record Policy Question
+→ Ask Company Owner
+→ Preserve Confirmed Answer
+→ Create Knowledge Candidate
+→ Human Knowledge Approval
+```
+
 ## 3. Import Email
 
 ### Goal
@@ -80,18 +92,20 @@ The user may leave the thread unclassified and return later.
 
 ### Goal
 
-Classify the inquiry and provide a reviewer-friendly summary.
+Classify and route an inquiry without blocking normal high-confidence work.
 
 ### Main Flow
 
-1. The user selects **Run Classification**.
+1. Email ingestion triggers automatic processing, or the user selects **Run automatic processing** for an imported thread.
 2. The system prepares the minimum required email context.
 3. The system calls the configured AI provider.
 4. The AI returns structured output.
 5. The system validates the output.
-6. The system stores the category, confidence, language, summary, and execution metadata.
-7. For French input, the system also provides an English summary.
-8. The thread enters `PENDING_REVIEW`.
+6. The system stores the category, confidence, language, and execution metadata.
+7. For French input, the system preserves and displays the original French content.
+8. Confidence below `0.70` or an explicit `MANUAL_REVIEW` category enters `PENDING_REVIEW`.
+9. Other validated classifications enter `AUTO_ROUTED` and continue immediately.
+10. Technical issues enter the technical queue; unknown and other unsupported questions enter the human-answer queue; known questions search Active Knowledge.
 
 ### Failure Handling
 
@@ -100,11 +114,11 @@ Classify the inquiry and provide a reviewer-friendly summary.
 - Missing Gemini configuration → suggest mock mode or configuration.
 - Previous valid results are not overwritten by failed retries.
 
-## 6. Human Classification Review
+## 6. Human Classification Review and Correction
 
 ### Goal
 
-Confirm or correct the AI result.
+Resolve a blocked low-confidence result or correct an automatically routed result.
 
 ### Main Flow
 
@@ -116,9 +130,9 @@ Confirm or correct the AI result.
    - add a correction note.
 3. The system stores the final reviewed result.
 4. The original AI result remains available.
-5. The thread enters `REVIEWED`.
+5. Routing resumes from the corrected category.
 
-**Rule:** AI classification is never final without human review.
+**Rule:** high-confidence classification may drive routing, but it is never a sending decision. A human can correct it, and all real or simulated reply sending remains human-confirmed.
 
 ## 7. Search Approved Knowledge
 
@@ -128,9 +142,10 @@ Find approved knowledge relevant to the reviewed inquiry.
 
 ### Main Flow
 
-1. The system searches active knowledge using the email content and reviewed category.
+1. For a high-confidence `KNOWN_QUESTION`, the system builds a compact query from question-like text in the latest inbound message and searches active knowledge using the effective category (human-corrected when present, otherwise the validated AI category).
 2. Results are ranked by keyword relevance, category, and language.
-3. The user selects one or more relevant entries.
+3. A deterministic relevance gate requires at least two meaningful query terms in the canonical question itself. Answer text may improve ranking but cannot make a weak question match eligible; title-only or otherwise broad hits are not sufficient grounding.
+4. The first MVP draft uses only the strongest qualifying entry and displays that retrieval evidence; additional matches are not concatenated into the reply.
 
 ### No-Result Flow
 
@@ -146,6 +161,17 @@ When no relevant knowledge exists:
 ### Goal
 
 Convert useful information from a reviewed conversation into reusable knowledge.
+
+For imported historical sources, the reviewer first records one of these source
+decisions without changing the deterministic prescreen result:
+
+- `APPROVED`: the source may proceed to candidate creation;
+- `NEEDS_FOLLOW_UP`: a person must resolve an uncertainty first;
+- `REJECTED`: the source must not proceed.
+
+Each saved decision records its timestamp and an optional note. Changing a
+decision creates another review event so the review history remains traceable.
+Source approval does not create approved knowledge.
 
 ### Main Flow
 
@@ -182,22 +208,41 @@ The user may create the candidate manually without AI.
 
 **Rule:** Only human-approved content may become authoritative knowledge.
 
+## 9.1 Resolve Website Policy Evidence
+
+### Goal
+
+Resolve contradictory or time-sensitive public website claims without treating
+the website as automatically authoritative.
+
+### Main Flow
+
+1. The reviewer selects a policy question.
+2. The system displays every captured public evidence excerpt and source URL.
+3. The reviewer copies the prepared French question and asks the company owner.
+4. The reviewer pastes the confirmed answer without overwriting source evidence.
+5. The reviewer selects `CONFIRMED`, `NEEDS_FOLLOW_UP`, or `REJECTED`.
+6. The system stores the current state and an immutable review event.
+7. A confirmed item may later be used to create a knowledge candidate.
+
+**Rule:** A confirmed website policy is resolved source material, not active
+knowledge. It still requires the knowledge-candidate approval workflow.
+
 ## 10. Generate Reply Draft
 
 ### Preconditions
 
-- Classification is reviewed.
-- At least one relevant active knowledge entry is selected.
+- Classification is high confidence or human-corrected.
+- At least one relevant active knowledge entry was retrieved.
 - Target response language is known.
 
 ### Main Flow
 
-1. The user selects approved knowledge sources.
-2. The user selects **Generate Draft**.
-3. The system sends only the required context to the AI provider.
+1. The orchestration service selects the single strongest retrieved active knowledge source that passes the relevance gate.
+2. The system sends only the required context to the configured AI provider.
 4. The AI returns a structured subject, body, language, and source IDs.
 5. The system validates and stores the result.
-6. The draft enters `GENERATED`.
+6. The Dorian-style reference draft enters `GENERATED` and waits for a human.
 
 ### Failure Handling
 
@@ -264,11 +309,17 @@ Secrets must never be displayed.
 ```text
 IMPORTED
 → READY_FOR_CLASSIFICATION
-→ PENDING_REVIEW
-→ REVIEWED
+→ AUTO_ROUTED
 → DRAFT_READY
-→ APPROVED
 → SIMULATED_SENT
+```
+
+Human-gated branches:
+
+```text
+PENDING_REVIEW → CORRECTED → AUTO_ROUTED
+AUTO_ROUTED → TECHNICAL_QUEUED → SIMULATED_FORWARDED
+AUTO_ROUTED → AWAITING_HUMAN_ANSWER → SIMULATED_SENT
 ```
 
 Possible failures:
@@ -321,13 +372,13 @@ GENERATION_FAILED → GENERATED
 
 ## 16. Workflow Rules
 
-1. Every AI classification requires human review.
+1. Low-confidence and explicitly manual classifications require human review; ordinary high-confidence classifications continue automatically and remain correctable.
 2. Only approved knowledge may support a grounded draft.
 3. AI output must be schema-validated.
 4. Original email content must remain unchanged.
 5. Original AI output must remain available after correction.
-6. French emails must include an English reviewer summary.
-7. AI cannot approve classifications, knowledge, or drafts.
+6. French source content must remain unchanged and visible during review.
+7. AI cannot approve knowledge, approve a draft, or confirm sending; automatic classification is a routing input, not a human approval.
 8. The MVP never sends real email.
 9. Failed operations must remain recoverable.
 10. Important state changes must be recorded.

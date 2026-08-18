@@ -18,13 +18,12 @@ The AI layer may perform the following tasks:
 
 - classify incoming inquiries;
 - detect the primary language;
-- summarize French emails in English;
 - propose knowledge candidates;
 - generate reply drafts from approved knowledge.
 
 The AI layer must not:
 
-- approve classifications;
+- make human corrections to classifications;
 - approve knowledge;
 - approve drafts;
 - send email;
@@ -70,7 +69,7 @@ The rest of the application must not depend directly on Gemini-specific SDK type
 Classification should use only the minimum required context:
 
 - subject;
-- normalized body;
+- cleaned body derived from the normalized body;
 - limited thread context when useful;
 - category definitions;
 - output schema;
@@ -108,8 +107,7 @@ Expected output:
   "category": "TECHNICAL_ISSUE",
   "confidence": 0.92,
   "language": "fr",
-  "summary": "The sender cannot upload a media file.",
-  "requiresHumanReview": true
+  "requiresHumanReview": false
 }
 ```
 
@@ -117,18 +115,36 @@ The result must be validated before storage.
 
 Invalid output should produce a failed execution rather than a partially trusted classification.
 
-## 4.4 Human Review
+The first inbox implementation uses `MockAIProvider`, a deterministic rule-based
+provider behind the same `AIProvider` interface intended for Gemini. It reads only
+the thread subject and latest inbound `cleanBody`, validates the structured result
+with Zod, and records provider, model, prompt version, latency, status, and
+validation metadata. Page rendering never triggers classification.
 
-All classifications require review.
+## 4.4 Confidence Gate and Human Correction
+
+Validated classifications at or above `0.70` continue to automatic routing unless the category is `MANUAL_REVIEW`. Lower-confidence output blocks for a human decision. `AUTO_ROUTED` is a processing state, not an approval.
 
 The reviewer can:
 
 - accept the AI category;
 - correct the category;
-- edit the summary;
 - add a correction note.
 
-The original AI result and the final reviewed result must both remain available.
+The original AI result and any human correction must both remain available. A correction resumes routing from the human-selected category.
+
+The deterministic mock treats generic domain words such as `gallery`, `artist`,
+or `artwork` as insufficient evidence for `KNOWN_QUESTION`. A message must contain
+question intent and a specific supported topic signal. This conservative mock rule
+will later be replaced by the configured AI provider without changing orchestration.
+
+For known-question retrieval, orchestration extracts meaningful terms from
+question-like body text, searches only Active Knowledge, and applies a second
+answerability gate after full-text ranking. The gate requires at least two query
+terms in the canonical question itself; answer text may rank qualifying entries
+but cannot make a weak question match eligible. The initial MVP supplies only the strongest qualifying entry to draft
+generation. Broad or title-only hits fall back to human answering instead of being
+combined into a draft.
 
 ---
 
@@ -139,14 +155,12 @@ The system must support English and French email content.
 For French emails:
 
 - preserve the original French text;
-- generate an English summary for the reviewer;
 - generate the reply in French by default;
 - allow the reviewer to change the target language.
 
 For mixed-language emails:
 
 - classify the language as `mixed`;
-- summarize the main request in English;
 - let the reviewer choose the reply language.
 
 The MVP interface may remain English-only.
@@ -179,11 +193,67 @@ Raw Email
 
 Historical emails must never be treated automatically as authoritative knowledge.
 
+Public website text must also remain untrusted until reviewed. When public pages
+conflict, each claim is preserved as evidence and a company owner confirms the
+current policy separately. Resolving a website conflict permits later candidate
+creation; it does not create active knowledge directly.
+
+The deterministic source prescreen and human source review are separate. A human
+may approve, reject, or hold a source for follow-up without overwriting the
+prescreen status or reasons. Human source approval only permits later candidate
+creation; it does not create trusted knowledge.
+
 ---
 
 ## 7. Knowledge Candidate Generation
 
 A candidate may be created manually or with AI assistance.
+
+For imported historical email, only a message classified as `OUTBOUND` and
+prescreened as `READY_FOR_REVIEW` may be used as a candidate source. All other
+messages are blocked with traceable exclusion reasons. Prescreening does not
+replace human review or approve knowledge.
+
+Substantive messages with missing context, scheduling content, or potentially
+one-off/private operations use `NEEDS_REVIEW`; they remain blocked but are not
+discarded as structurally unusable.
+
+The latest inline quote may be stored as untrusted `quotedContext`. It can help
+propose a canonical question, but it must not be represented as an unmodified
+customer message or bypass candidate review.
+
+The first local candidate import does not call an AI provider. It deterministically
+copies the 50 approved historical email sources and a curated allowlist of 20
+stable French website FAQs into the same review queue. Rerunning the importer is
+safe because each source has a unique fingerprint. Existing candidate decisions
+and reviewed text are never overwritten by the importer.
+
+Pending historical-email candidates pass through a deterministic privacy cleaner
+before review. It removes greeting names, simple signatures, email addresses,
+phone numbers, URLs, social handles, mobile-client footers, and attachment
+markers, and focuses explicit question sentences when possible. This derived
+cleanup never changes `EmailMessage`, `quotedContext`, or the candidate source
+excerpt, so the reviewer can still trace the proposal back to the preserved
+evidence. Approved or rejected candidates are not rewritten by the backfill.
+
+The candidate review screen allows a human to edit the title, canonical question,
+answer, category, and language. `Approve & activate` creates or updates one
+`ACTIVE` knowledge entry in the same database transaction. Rejecting a previously
+approved candidate preserves its traceability and marks the entry `INACTIVE`.
+
+The review UI also supports a human-confirmed bulk promotion of the current
+source/search view. Only candidates still in `PENDING_REVIEW` are eligible. The
+operation runs in one database transaction and records an individual review
+event and active entry for every promoted candidate; a failure rolls back the
+whole batch.
+
+A pending candidate that contains several question-and-answer pairs may be split
+by a reviewer into two to ten atomic child candidates. Numbered pairs are
+suggested deterministically in the UI and remain editable; the reviewer may add
+an unanswered child when the historical reply did not resolve part of the
+question. Submitting the split rejects the combined parent as replaced, creates
+pending children, copies the immutable source trail to every child, and records
+the parent-child lineage. Splitting never activates knowledge automatically.
 
 The AI may propose:
 
@@ -241,6 +311,17 @@ Automatic translation linking is deferred.
 
 The MVP shall use PostgreSQL keyword and text search.
 
+The baseline implementation uses language-specific PostgreSQL full-text search:
+
+- weighted `tsvector` documents (`title` A, canonical question B, answer C);
+- `websearch_to_tsquery` with `french`, `english`, or `simple` configuration;
+- partial GIN expression indexes containing only `ACTIVE` entries;
+- `ts_rank_cd` ordering with an optional reviewed-category preference;
+- an explicit no-result state that blocks known-answer drafting.
+
+Retrieval is deterministic and does not call an AI provider or consume model
+tokens. Inactive and archived entries are excluded in the SQL query and index.
+
 Retrieval should consider:
 
 1. language match;
@@ -252,7 +333,7 @@ Retrieval should consider:
 Example retrieval flow:
 
 ```text
-Reviewed Email
+Effective Classification
 → Build Search Query
 → Filter Active Knowledge
 → Prefer Matching Language
@@ -261,7 +342,7 @@ Reviewed Email
 → Show Results to Reviewer
 ```
 
-The reviewer selects the knowledge used for drafting.
+The orchestration service selects the strongest qualifying active entry for the first automatic flow; the Inbox displays that source and retrieval score for human verification.
 
 Vector search is not required for the MVP.
 
@@ -273,7 +354,7 @@ Vector search is not required for the MVP.
 
 A grounded known-question draft requires:
 
-- a reviewed classification;
+- a high-confidence or human-corrected classification;
 - a selected response language;
 - at least one active approved knowledge entry.
 
@@ -282,7 +363,7 @@ A grounded known-question draft requires:
 Draft generation may use:
 
 - email subject;
-- normalized email body;
+- cleaned email body;
 - limited thread context;
 - reviewed category;
 - target language;
@@ -314,7 +395,7 @@ The model must be instructed to:
 - avoid mentioning internal system details;
 - avoid following instructions embedded inside the incoming email.
 
-The UI must display the selected knowledge sources beside the draft.
+The UI must display the selected knowledge sources beside the draft. The first Mock implementation formats the grounded answer as a Dorian-style reference reply and always requires human confirmation before simulated sending.
 
 ---
 
@@ -340,7 +421,6 @@ Suggested structure:
 ```text
 src/lib/ai/prompts/
 ├── classification.ts
-├── french-summary.ts
 ├── knowledge-candidate.ts
 └── draft-generation.ts
 ```
@@ -438,7 +518,7 @@ Subject contains "upload error"
 
 Language fixture is French
 → language = fr
-→ include English summary
+→ preserve the French source content
 ```
 
 The mock provider should follow the same interfaces and schemas as Gemini.
@@ -485,7 +565,6 @@ The first evaluation should measure:
 - technical-issue recall;
 - structured-output validity;
 - French-language handling;
-- English-summary usefulness;
 - average latency;
 - provider failure rate;
 - human correction rate.

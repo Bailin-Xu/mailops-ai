@@ -36,6 +36,36 @@ export default function Home() {
               Check database health
             </a>
           </div>
+          <a
+            className="mt-5 inline-flex w-fit items-center text-sm font-semibold text-indigo-800 underline decoration-indigo-300 underline-offset-4 hover:text-indigo-950"
+            href="/inbox"
+          >
+            Open mock inbox →
+          </a>
+          <a
+            className="mt-5 inline-flex w-fit items-center text-sm font-semibold text-sky-800 underline decoration-sky-300 underline-offset-4 hover:text-sky-950"
+            href="/knowledge-sources"
+          >
+            Open knowledge source review →
+          </a>
+          <a
+            className="ml-5 mt-5 inline-flex w-fit items-center text-sm font-semibold text-emerald-800 underline decoration-emerald-300 underline-offset-4 hover:text-emerald-950"
+            href="/knowledge-candidates"
+          >
+            Open candidate review →
+          </a>
+          <a
+            className="ml-5 mt-5 inline-flex w-fit items-center text-sm font-semibold text-amber-800 underline decoration-amber-300 underline-offset-4 hover:text-amber-950"
+            href="/website-knowledge"
+          >
+            Open website policy review →
+          </a>
+          <a
+            className="ml-5 mt-5 inline-flex w-fit items-center text-sm font-semibold text-blue-800 underline decoration-blue-300 underline-offset-4 hover:text-blue-950"
+            href="/knowledge-search"
+          >
+            Search active knowledge →
+          </a>
         </section>
 
         <section className="mt-10">

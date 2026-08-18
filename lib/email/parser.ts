@@ -3,11 +3,13 @@ import { basename, extname } from "node:path";
 import { convert } from "html-to-text";
 import PostalMime, { type Attachment, type Email } from "postal-mime";
 
+import { cleanEmailBody } from "@/lib/email/clean-body";
 import { createEmailFingerprint } from "@/lib/email/fingerprint";
 import {
   normalizeMessageId,
   normalizeText,
   parseReferences,
+  repairWindows1252Controls,
   toParticipants,
 } from "@/lib/email/normalize";
 import {
@@ -60,10 +62,16 @@ export async function parseEml(
 
   const warnings: ParseWarning[] = [];
   const messageId = normalizeMessageId(parsed.messageId);
-  const subject = parsed.subject?.trim() || "(no subject)";
+  const subject = parsed.subject
+    ? repairWindows1252Controls(parsed.subject).normalize("NFC").trim() || "(no subject)"
+    : "(no subject)";
   const sentAt = parseSentAt(parsed.date, warnings);
-  const textBody = parsed.text ?? null;
-  const htmlBody = parsed.html ?? null;
+  const textBody = parsed.text
+    ? repairWindows1252Controls(parsed.text).normalize("NFC")
+    : null;
+  const htmlBody = parsed.html
+    ? repairWindows1252Controls(parsed.html).normalize("NFC")
+    : null;
 
   if (!messageId) warnings.push("MISSING_MESSAGE_ID");
   if (!parsed.subject?.trim()) warnings.push("MISSING_SUBJECT");
@@ -99,6 +107,8 @@ export async function parseEml(
     warnings.push("MISSING_BODY");
   }
 
+  const bodyParts = cleanEmailBody(normalizedBody);
+
   const parsedEmail = {
     messageId,
     inReplyTo: normalizeMessageId(parsed.inReplyTo),
@@ -109,6 +119,8 @@ export async function parseEml(
     textBody,
     htmlBody,
     normalizedBody,
+    cleanBody: bodyParts.cleanBody,
+    quotedContext: bodyParts.quotedContext,
     attachments: parsed.attachments.map(toAttachmentMetadata),
     fingerprint: createEmailFingerprint({
       subject,
@@ -146,7 +158,9 @@ function parseSentAt(value: string | undefined, warnings: ParseWarning[]): Date 
 
 function toAttachmentMetadata(attachment: Attachment) {
   return {
-    fileName: attachment.filename,
+    fileName: attachment.filename
+      ? repairWindows1252Controls(attachment.filename).normalize("NFC")
+      : null,
     mimeType: attachment.mimeType,
     sizeBytes: getAttachmentSize(attachment),
     contentId: attachment.contentId?.trim() || null,

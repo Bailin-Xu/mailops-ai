@@ -8,6 +8,13 @@ export const emailParticipantTypeSchema = z.enum([
   "REPLY_TO",
 ]);
 
+export const emailDirectionSchema = z.enum([
+  "INBOUND",
+  "OUTBOUND",
+  "SELF",
+  "UNKNOWN",
+]);
+
 export const emailParticipantSchema = z
   .object({
     type: emailParticipantTypeSchema,
@@ -48,6 +55,8 @@ export const parsedEmailSchema = z
     textBody: z.string().nullable(),
     htmlBody: z.string().nullable(),
     normalizedBody: z.string(),
+    cleanBody: z.string(),
+    quotedContext: z.string().nullable(),
     attachments: z.array(attachmentMetadataSchema),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     sourceFileName: z.string().min(1),
@@ -57,6 +66,7 @@ export const parsedEmailSchema = z
   .strict();
 
 export type EmailParticipantType = z.infer<typeof emailParticipantTypeSchema>;
+export type EmailDirection = z.infer<typeof emailDirectionSchema>;
 export type EmailParticipant = z.infer<typeof emailParticipantSchema>;
 export type AttachmentMetadata = z.infer<typeof attachmentMetadataSchema>;
 export type ParseWarning = z.infer<typeof parseWarningSchema>;
@@ -75,3 +85,41 @@ export type EmlParseResult =
       status: "failed";
       error: { code: EmlParseErrorCode; message: string };
     };
+
+export const ingestionResultSchema = z.discriminatedUnion("status", [
+  z
+    .object({
+      status: z.literal("imported"),
+      messageId: z.string().uuid(),
+      threadId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal("duplicate"),
+      existingMessageId: z.string().uuid(),
+      threadId: z.string().uuid(),
+      matchedBy: z.enum(["MESSAGE_ID", "FINGERPRINT"]),
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal("failed"),
+      error: z
+        .object({
+          code: z.enum([
+            "EMPTY_FILE",
+            "UNSUPPORTED_FILE_TYPE",
+            "FILE_TOO_LARGE",
+            "MALFORMED_EMAIL",
+            "VALIDATION_FAILED",
+            "DATABASE_ERROR",
+          ]),
+          message: z.string(),
+        })
+        .strict(),
+    })
+    .strict(),
+]);
+
+export type IngestionResult = z.infer<typeof ingestionResultSchema>;

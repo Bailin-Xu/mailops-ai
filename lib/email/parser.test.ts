@@ -34,6 +34,7 @@ describe("parseEml", () => {
       ]),
     );
     expect(result.email.normalizedBody).toContain("Are you open on Saturday?");
+    expect(result.email.cleanBody).toContain("Are you open on Saturday?");
     expect(result.email.fingerprint).toMatch(/^[a-f0-9]{64}$/);
   });
 
@@ -47,7 +48,27 @@ describe("parseEml", () => {
     expect(result.email.normalizedBody).toBe(
       "Bonjour, j’aimerais connaître les modalités d’inscription.",
     );
+    expect(result.email.cleanBody).toBe(
+      "Bonjour, j’aimerais connaître les modalités d’inscription.",
+    );
     expect(result.email.participants[0]?.displayName).toBe("Élise Exemple");
+  });
+
+  it("repairs Windows-1252 C1 punctuation after MIME decoding", async () => {
+    const result = await parseFixture("windows-1252.eml");
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") return;
+
+    expect(result.email.subject).toBe("L’Œuvre — réponse");
+    expect(result.email.participants[0]?.displayName).toBe("Doriane L’Œuvre");
+    expect(result.email.textBody).toContain(
+      "L’association… L’Œuvre et le cœur – Montréal — Canada.",
+    );
+    expect(result.email.normalizedBody).toBe(
+      "L’association… L’Œuvre et le cœur – Montréal — Canada.",
+    );
+    expect(result.email.normalizedBody).not.toMatch(/[\u0080-\u009f]/);
   });
 
   it("creates readable text from HTML without loading remote content", async () => {

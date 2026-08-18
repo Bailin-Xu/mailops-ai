@@ -5,6 +5,42 @@ import type {
   EmailParticipantType,
 } from "@/lib/email/schemas";
 
+const WINDOWS_1252_C1_REPLACEMENTS: Readonly<Record<string, string>> = {
+  "\u0080": "€",
+  "\u0082": "‚",
+  "\u0083": "ƒ",
+  "\u0084": "„",
+  "\u0085": "…",
+  "\u0086": "†",
+  "\u0087": "‡",
+  "\u0088": "ˆ",
+  "\u0089": "‰",
+  "\u008a": "Š",
+  "\u008b": "‹",
+  "\u008c": "Œ",
+  "\u008e": "Ž",
+  "\u0091": "‘",
+  "\u0092": "’",
+  "\u0093": "“",
+  "\u0094": "”",
+  "\u0095": "•",
+  "\u0096": "–",
+  "\u0097": "—",
+  "\u0098": "˜",
+  "\u0099": "™",
+  "\u009a": "š",
+  "\u009b": "›",
+  "\u009c": "œ",
+  "\u009e": "ž",
+  "\u009f": "Ÿ",
+};
+
+export function repairWindows1252Controls(value: string): string {
+  return value.replace(/[\u0080-\u009f]/g, (character) => {
+    return WINDOWS_1252_C1_REPLACEMENTS[character] ?? character;
+  });
+}
+
 export function normalizeMessageId(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -32,7 +68,7 @@ export function parseReferences(value: string | null | undefined): string[] {
 }
 
 export function normalizeText(value: string): string {
-  return value
+  return repairWindows1252Controls(value)
     .normalize("NFC")
     .replace(/\r\n?/g, "\n")
     .split("\n")
@@ -43,7 +79,11 @@ export function normalizeText(value: string): string {
 }
 
 export function normalizeSubject(value: string): string {
-  return value.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+  return repairWindows1252Controls(value)
+    .normalize("NFC")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 export function toParticipants(
@@ -62,7 +102,7 @@ export function toParticipants(
       return [
         {
           type,
-          displayName: mailbox.name.trim() || null,
+          displayName: repairWindows1252Controls(mailbox.name).normalize("NFC").trim() || null,
           emailAddress,
           normalizedAddress: emailAddress.toLowerCase(),
         },
