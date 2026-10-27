@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
+import { revisionSchema, workflowTransaction } from "@/lib/workflow/transaction";
 
 export const knowledgeReviewDecisionValues = [
   "APPROVED",
@@ -19,6 +20,7 @@ export type KnowledgeReviewStatus =
 
 const reviewInputSchema = z.object({
   messageId: z.string().uuid(),
+  expectedRevision: revisionSchema,
   decision: z.enum(knowledgeReviewDecisionValues),
   note: z
     .string()
@@ -42,7 +44,7 @@ export async function saveKnowledgeSourceReview(
   const review = parseKnowledgeSourceReview(input);
   const reviewedAt = new Date();
 
-  return db.$transaction(async (transaction) => {
+  return workflowTransaction(db, async (transaction) => {
     const message = await transaction.emailMessage.findUnique({
       where: { id: review.messageId },
       select: { id: true, direction: true, cleanBody: true },
@@ -62,14 +64,16 @@ export async function saveKnowledgeSourceReview(
     }
 
     const updated = await transaction.emailMessage.update({
-      where: { id: review.messageId },
+      where: { id: review.messageId, knowledgeReviewRevision: review.expectedRevision },
       data: {
+        knowledgeReviewRevision: { increment: 1 },
         knowledgeReviewStatus: review.decision,
         knowledgeReviewNote: review.note,
         knowledgeReviewedAt: reviewedAt,
       },
       select: {
         id: true,
+        knowledgeReviewRevision: true,
         knowledgeReviewStatus: true,
         knowledgeReviewNote: true,
         knowledgeReviewedAt: true,

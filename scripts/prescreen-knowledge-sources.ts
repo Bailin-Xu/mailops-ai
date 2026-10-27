@@ -11,6 +11,7 @@ async function main() {
   const messages = await db.emailMessage.findMany({
     select: {
       id: true,
+      knowledgeReviewRevision: true,
       direction: true,
       subject: true,
       cleanBody: true,
@@ -23,6 +24,7 @@ async function main() {
 
   const assessed = messages.map((message) => ({
     id: message.id,
+    knowledgeReviewRevision: message.knowledgeReviewRevision,
     previousStatus: message.knowledgeSourceStatus,
     previousReasons: message.knowledgeExclusionReasons,
     assessment: assessHistoricalKnowledgeSource(message),
@@ -37,8 +39,9 @@ async function main() {
     await db.$transaction(
       changed.map((message) =>
         db.emailMessage.update({
-          where: { id: message.id },
+          where: { id: message.id, knowledgeReviewRevision: message.knowledgeReviewRevision },
           data: {
+            knowledgeReviewRevision: { increment: 1 },
             knowledgeSourceStatus: message.assessment.status,
             knowledgeExclusionReasons: message.assessment.exclusionReasons,
           },

@@ -10,11 +10,14 @@ import {
   type AIProvider,
 } from "@/lib/ai/provider";
 import { getDb } from "@/lib/db";
+import { inboundContextQuery, isTerminalProcessing, loadClassificationContext, sourceContextHash } from "@/lib/workflow/context";
+import { revisionSchema, WorkflowConflictError, workflowTransaction } from "@/lib/workflow/transaction";
 import { z } from "zod";
 
 const threadIdSchema = z.string().uuid();
 const classificationReviewSchema = z.object({
   classificationId: z.string().uuid(),
+  expectedRevision: revisionSchema,
   category: z.enum(classificationCategoryValues),
   note: z.string().trim().max(2000).optional().default(""),
 });
@@ -36,23 +39,27 @@ export async function runThreadClassification(
     select: {
       id: true,
       subject: true,
-      messages: {
-        where: { direction: "INBOUND" },
-        orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
-        take: 1,
-        select: { cleanBody: true, normalizedBody: true },
-      },
+      workflowRevision: true,
+      messages: inboundContextQuery,
+      classifications: { orderBy: [{ threadRevision: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }, { id: "desc" }], take: 1 },
     },
   });
   if (!thread) throw new Error("The selected thread no longer exists.");
   const message = thread.messages[0];
   if (!message) throw new Error("Only a thread with an inbound message can be classified.");
+  const contextHash = sourceContextHash(thread);
+  const previous = thread.classifications[0];
+  if (previous && isTerminalProcessing(previous.processingStatus)
+    && (!previous.sourceContextHash || previous.sourceContextHash === contextHash)) {
+    throw new WorkflowConflictError();
+  }
 
   const cleanBody = message.cleanBody.trim() || message.normalizedBody.trim();
   const metadata: Prisma.InputJsonObject = {
     threadId: thread.id,
     subjectLength: thread.subject.length,
     bodyLength: cleanBody.length,
+    sourceContextHash: contextHash,
   };
   const startedAt = performance.now();
 
@@ -87,43 +94,74 @@ export async function runThreadClassification(
 
   const result = validated.data;
   const latencyMs = elapsed(startedAt);
-  return db.$transaction(async (transaction) => {
-    const execution = await transaction.aIExecution.create({
-      data: {
-        taskType: "CLASSIFICATION",
-        provider: provider.id,
-        model: provider.model,
-        promptVersion: provider.classificationPromptVersion,
-        status: "SUCCEEDED",
-        latencyMs,
-        inputTokens: executionMetadata?.inputTokens,
-        outputTokens: executionMetadata?.outputTokens,
-        inputMetadata: withProviderResponseMetadata(metadata, executionMetadata),
-        output: result,
-      },
+  try {
+    return await workflowTransaction(db, async (transaction) => {
+      const current = await transaction.emailThread.findUniqueOrThrow({
+        where: { id: thread.id },
+        include: { messages: inboundContextQuery, classifications: { orderBy: [{ threadRevision: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }, { id: "desc" }], take: 1 } },
+      });
+      const latest = current.classifications[0];
+      if (current.workflowRevision !== thread.workflowRevision
+        || sourceContextHash(current) !== contextHash
+        || latest?.id !== previous?.id || latest?.revision !== previous?.revision
+        || (latest && isTerminalProcessing(latest.processingStatus)
+          && (!latest.sourceContextHash || latest.sourceContextHash === contextHash))) {
+        throw new WorkflowConflictError();
+      }
+      await transaction.emailThread.update({
+        where: { id: thread.id, workflowRevision: thread.workflowRevision },
+        data: { workflowRevision: { increment: 1 } },
+      });
+      const execution = await transaction.aIExecution.create({
+        data: {
+          taskType: "CLASSIFICATION",
+          provider: provider.id,
+          model: provider.model,
+          promptVersion: provider.classificationPromptVersion,
+          status: "SUCCEEDED",
+          latencyMs,
+          inputTokens: executionMetadata?.inputTokens,
+          outputTokens: executionMetadata?.outputTokens,
+          inputMetadata: withProviderResponseMetadata(metadata, executionMetadata),
+          output: result,
+        },
+      });
+      const classification = await transaction.classification.create({
+        data: {
+          threadId: thread.id,
+          aiExecutionId: execution.id,
+          aiCategory: result.category,
+          aiConfidence: result.confidence,
+          aiLanguage: result.language,
+          threadRevision: thread.workflowRevision + 1,
+          sourceContextHash: contextHash,
+          requiresHumanReview: requiresClassificationReview(result),
+          reviewStatus: requiresClassificationReview(result) ? "PENDING" : "AUTO_ROUTED",
+        },
+      });
+      await transaction.emailThread.update({
+        where: { id: thread.id },
+        data: {
+          status: requiresClassificationReview(result)
+            ? "CLASSIFICATION_PENDING_REVIEW"
+            : "AUTOMATIC_PROCESSING",
+          language: result.language,
+        },
+      });
+      await transaction.draft.updateMany({
+        where: { threadId: thread.id, status: "GENERATED" },
+        data: { status: "SUPERSEDED" },
+      });
+      return classification;
     });
-    const classification = await transaction.classification.create({
-      data: {
-        threadId: thread.id,
-        aiExecutionId: execution.id,
-        aiCategory: result.category,
-        aiConfidence: result.confidence,
-        aiLanguage: result.language,
-        requiresHumanReview: requiresClassificationReview(result),
-        reviewStatus: requiresClassificationReview(result) ? "PENDING" : "AUTO_ROUTED",
-      },
-    });
-    await transaction.emailThread.update({
-      where: { id: thread.id },
-      data: {
-        status: requiresClassificationReview(result)
-          ? "CLASSIFICATION_PENDING_REVIEW"
-          : "AUTOMATIC_PROCESSING",
-        language: result.language,
-      },
-    });
-    return classification;
-  });
+  } catch (error) {
+    if (error instanceof WorkflowConflictError) {
+      await recordFailedExecution({ provider, latencyMs: elapsed(startedAt), metadata,
+        errorMessage: "Classification result discarded because its context changed.",
+        validationErrors: ["STALE_CONTEXT"], executionMetadata, db });
+    }
+    throw error;
+  }
 }
 
 export async function reviewClassification(
@@ -131,27 +169,37 @@ export async function reviewClassification(
   db: PrismaClient = getDb(),
 ) {
   const review = parseClassificationReview(input);
-  const current = await db.classification.findUnique({
-    where: { id: review.classificationId },
-  });
-  if (!current) throw new Error("The selected classification no longer exists.");
-  if (current.reviewStatus === "ACCEPTED" || current.reviewStatus === "CORRECTED") {
-    throw new Error("This classification has already been reviewed.");
-  }
+  return workflowTransaction(db, async (transaction) => {
+    const current = await loadClassificationContext(review.classificationId, transaction);
+    if (current.revision !== review.expectedRevision || ["SIMULATED_SENT", "SIMULATED_FORWARDED"].includes(current.processingStatus ?? "")) {
+      throw new WorkflowConflictError();
+    }
+    if (current.reviewStatus === "ACCEPTED" || current.reviewStatus === "CORRECTED") {
+      throw new Error("This classification has already been reviewed.");
+    }
 
-  const reviewedCategory = review.category as ClassificationCategory;
-  const status = reviewedCategory === current.aiCategory ? "ACCEPTED" : "CORRECTED";
-  const reviewedAt = new Date();
+    const reviewedCategory = review.category as ClassificationCategory;
+    const status = reviewedCategory === current.aiCategory ? "ACCEPTED" : "CORRECTED";
+    const reviewedAt = new Date();
 
-  return db.$transaction(async (transaction) => {
     const classification = await transaction.classification.update({
-      where: { id: current.id },
+      where: { id: current.id, revision: review.expectedRevision },
       data: {
+        revision: { increment: 1 },
         reviewedCategory,
         correctionNote: review.note || null,
         reviewStatus: status,
         reviewedAt,
+        processingStatus: null,
+        route: null,
+        knowledgeQuery: null,
+        knowledgeMatchCount: 0,
+        routingReason: null,
       },
+    });
+    await transaction.draft.updateMany({
+      where: { classificationId: current.id, status: "GENERATED" },
+      data: { status: "SUPERSEDED" },
     });
     await transaction.emailThread.update({
       where: { id: current.threadId },

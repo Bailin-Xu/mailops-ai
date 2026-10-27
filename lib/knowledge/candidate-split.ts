@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
+import { revisionSchema, workflowTransaction } from "@/lib/workflow/transaction";
 
 export type CandidateSplitSegment = {
   title: string;
@@ -11,6 +12,7 @@ export type CandidateSplitSegment = {
 
 const splitCandidateSchema = z.object({
   candidateId: z.string().uuid(),
+  expectedRevision: revisionSchema,
   segments: z
     .array(
       z.object({
@@ -76,7 +78,7 @@ export async function splitKnowledgeCandidate(
   const split = parseCandidateSplit(input);
   const splitAt = new Date();
 
-  return db.$transaction(async (transaction) => {
+  return workflowTransaction(db, async (transaction) => {
     const parent = await transaction.knowledgeCandidate.findUnique({
       where: { id: split.candidateId },
       include: { sources: true, splitCandidates: { select: { id: true } } },
@@ -91,8 +93,8 @@ export async function splitKnowledgeCandidate(
 
     const note = `Split by a human into ${split.segments.length} atomic candidates.`;
     await transaction.knowledgeCandidate.update({
-      where: { id: parent.id },
-      data: { status: "REJECTED", reviewNote: note, reviewedAt: splitAt },
+      where: { id: parent.id, revision: split.expectedRevision },
+      data: { status: "REJECTED", reviewNote: note, reviewedAt: splitAt, revision: { increment: 1 } },
     });
     await transaction.knowledgeCandidateReviewEvent.create({
       data: {

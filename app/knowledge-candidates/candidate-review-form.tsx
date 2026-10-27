@@ -13,6 +13,7 @@ const initialState: Awaited<ReturnType<typeof reviewCandidateAction>> = {
 type CandidateReviewFormProps = {
   candidate: {
     id: string;
+    revision: number;
     title: string;
     canonicalQuestion: string;
     proposedAnswer: string;
@@ -33,6 +34,7 @@ export function CandidateReviewForm({ candidate }: CandidateReviewFormProps) {
   return (
     <form action={action} className="candidate-editor">
       <input name="candidateId" type="hidden" value={candidate.id} />
+      <input name="expectedRevision" type="hidden" value={candidate.revision} />
       <div className="candidate-editor-heading">
         <div><p>Human-reviewed version</p><h3>Edit before promoting</h3></div>
         <span>{candidateStatusLabel(candidate.status)}</span>

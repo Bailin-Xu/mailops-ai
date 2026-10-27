@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getConfiguredAIProvider } from "@/lib/ai/provider-factory";
+import { WorkflowConflictError } from "@/lib/workflow/transaction";
 import {
   confirmAndSimulateSend,
   correctAndResumeProcessing,
@@ -29,6 +30,7 @@ export async function runClassificationAction(
     revalidatePath("/inbox");
     return actionResult("success", `Automatic processing completed with the ${provider.id} provider.`);
   } catch (error) {
+    revalidatePath("/inbox");
     return actionResult("error", safeMessage(error, "Classification could not be completed."));
   }
 }
@@ -40,12 +42,14 @@ export async function reviewClassificationAction(
   try {
     await correctAndResumeProcessing({
       classificationId: formData.get("classificationId"),
+      expectedRevision: formData.get("expectedRevision"),
       category: formData.get("category"),
       note: formData.get("note"),
     }, provider);
     revalidatePath("/inbox");
     return actionResult("success", "Classification feedback saved and routing resumed.");
   } catch (error) {
+    revalidatePath("/inbox");
     return actionResult("error", safeMessage(error, "The review could not be saved."));
   }
 }
@@ -59,6 +63,7 @@ export async function retryProcessingAction(
     revalidatePath("/inbox");
     return actionResult("success", "Automatic processing retried.");
   } catch (error) {
+    revalidatePath("/inbox");
     return actionResult("error", safeMessage(error, "Automatic processing could not be completed."));
   }
 }
@@ -101,6 +106,7 @@ export async function submitManualAnswerAction(
   try {
     await submitManualAnswer({
       classificationId: formData.get("classificationId"),
+      expectedRevision: formData.get("expectedRevision"),
       body: formData.get("body"),
       createCandidate: formData.get("createCandidate") === "on",
     });
@@ -119,6 +125,7 @@ function actionResult(
 }
 
 function safeMessage(error: unknown, fallback: string) {
+  if (error instanceof WorkflowConflictError) return error.message;
   if (!(error instanceof Error)) return fallback;
   const allowed = [
     "no longer exists",

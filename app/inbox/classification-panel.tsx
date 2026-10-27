@@ -17,6 +17,7 @@ const initialState: InboxActionState = { status: "idle", message: "", completedA
 
 type ClassificationView = {
   id: string;
+  revision: number;
   aiCategory: string;
   aiConfidence: number;
   aiLanguage: string;
@@ -144,6 +145,7 @@ export function ClassificationPanel({
           {classification.reviewStatus === "PENDING" ? (
             <ClassificationCorrectionForm
               classification={classification}
+              key={`review-${classification.revision}`}
               action={reviewAction}
               busy={reviewing}
               title={classification.aiConfidence < 0.7
@@ -153,7 +155,7 @@ export function ClassificationPanel({
           ) : classification.reviewStatus === "AUTO_ROUTED" ? (
             <details className="inbox-correction-disclosure">
               <summary>Classification looks wrong? Correct it and reroute</summary>
-              <ClassificationCorrectionForm classification={classification} action={reviewAction} busy={reviewing} title="Record classification feedback" />
+              <ClassificationCorrectionForm key={`review-${classification.revision}`} classification={classification} action={reviewAction} busy={reviewing} title="Record classification feedback" />
             </details>
           ) : (
             <div className="inbox-reviewed-classification">
@@ -163,11 +165,11 @@ export function ClassificationPanel({
             </div>
           )}
 
-          {classification.processingStatus === "FAILED" || !classification.processingStatus ? (
+          {classification.processingStatus === "FAILED" || classification.processingStatus === "DRAFT_READY" || !classification.processingStatus ? (
             <form action={retryAction} className="inbox-route-action">
               <input name="classificationId" type="hidden" value={classification.id} />
-              <div><span>Recoverable processing state</span><p>{classification.processingStatus === "FAILED" ? "Draft generation failed safely." : "Complete routing for this earlier classification record."}</p></div>
-              <button disabled={retrying || classification.reviewStatus === "PENDING"} type="submit">{retrying ? "Retrying…" : "Resume automatic processing"}</button>
+              <div><span>Reference reply preparation</span><p>{classification.processingStatus === "DRAFT_READY" ? "A replacement becomes available only after it succeeds. Failed attempts preserve the previous reply." : "Retry processing for the current classification."}</p></div>
+              <button disabled={retrying || classification.reviewStatus === "PENDING"} type="submit">{retrying ? "Retrying…" : classification.processingStatus === "DRAFT_READY" ? "Regenerate reference reply" : "Resume automatic processing"}</button>
             </form>
           ) : null}
 
@@ -185,7 +187,7 @@ export function ClassificationPanel({
                   </article>
                 ))}
               </div>
-              {draft.status === "GENERATED" ? (
+              {draft.status === "GENERATED" && classification.processingStatus === "DRAFT_READY" ? (
                 <>
                   <details className="inbox-original-draft">
                     <summary>View original AI draft</summary>
@@ -201,6 +203,12 @@ export function ClassificationPanel({
                     <small>No mailbox is connected. This stores the human-approved final text and a simulated-send timestamp.</small>
                   </form>
                 </>
+              ) : draft.status === "GENERATED" ? (
+                <div className="inbox-original-draft">
+                  <strong>Previous reference reply preserved</strong>
+                  <pre lang={draft.language}>{draft.body}</pre>
+                  <p>Retry processing before confirming this reply. Its context or grounding needs to be checked again.</p>
+                </div>
               ) : (
                 <div className="inbox-approved-draft">
                   <span>Human-approved final reply · {(draft.approvedLanguage ?? draft.language).toUpperCase()}</span>
@@ -222,8 +230,9 @@ export function ClassificationPanel({
           {classification.processingStatus === "SIMULATED_FORWARDED" ? <p className="inbox-complete-note">Simulated forwarded to the technical queue · Discord was not contacted.</p> : null}
 
           {classification.processingStatus === "AWAITING_HUMAN_ANSWER" || classification.processingStatus === "NO_KNOWLEDGE" ? (
-            <form action={answerAction} className="inbox-manual-answer">
+            <form action={answerAction} className="inbox-manual-answer" key={`answer-${classification.revision}`}>
               <input name="classificationId" type="hidden" value={classification.id} />
+              <input name="expectedRevision" type="hidden" value={classification.revision} />
               <div><span>Human answer queue</span><strong>{classification.processingStatus === "NO_KNOWLEDGE" ? "No grounded answer was found" : "Write the answer manually"}</strong></div>
               <label><span>Reply body</span><textarea disabled={answering} maxLength={20_000} name="body" placeholder="Write the answer that a human has verified…" required rows={7} /></label>
               <label className="inbox-candidate-option"><input disabled={answering} name="createCandidate" type="checkbox" /><span>Create a knowledge candidate from this verified answer</span></label>
@@ -254,6 +263,7 @@ function ClassificationCorrectionForm({
   return (
     <form action={action} className="inbox-human-review">
       <input name="classificationId" type="hidden" value={classification.id} />
+      <input name="expectedRevision" type="hidden" value={classification.revision} />
       <div className="inbox-human-review-heading"><span>Human decision</span><strong>{title}</strong></div>
       <label><span>Correct category</span><select defaultValue={classification.aiCategory} disabled={busy} name="category">{classificationCategoryValues.map((category) => <option key={category} value={category}>{category.replaceAll("_", " ")}</option>)}</select></label>
       <label><span>Feedback note <em>optional</em></span><textarea disabled={busy} maxLength={2000} name="note" placeholder="What was wrong or what did you verify?" rows={2} /></label>

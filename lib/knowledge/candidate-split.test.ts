@@ -27,6 +27,7 @@ describe("candidate splitting", () => {
   it("allows an unanswered child to remain pending but requires two children", () => {
     const valid = {
       candidateId: "45d980af-0099-4c35-b77f-3c61b8e8a300",
+      expectedRevision: 0,
       segments: [
         { title: "Artsy delay", canonicalQuestion: "Y a-t-il un délai sur Artsy ?", proposedAnswer: "Oui." },
         { title: "Photo approval", canonicalQuestion: "Les photos doivent-elles être approuvées ?", proposedAnswer: "" },

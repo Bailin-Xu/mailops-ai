@@ -57,6 +57,7 @@ export async function getKnowledgeSourceReviewQueue(filters: ReviewFilters) {
           knowledgeReviewStatus: true,
           knowledgeReviewNote: true,
           knowledgeReviewedAt: true,
+          knowledgeReviewRevision: true,
           cleanBody: true,
           quotedContext: true,
           normalizedBody: true,

@@ -14,6 +14,7 @@ async function main() {
   const messages = await db.emailMessage.findMany({
     select: {
       id: true,
+      knowledgeReviewRevision: true,
       direction: true,
       participants: {
         select: {
@@ -29,6 +30,7 @@ async function main() {
 
   const classified = messages.map((message) => ({
     id: message.id,
+    knowledgeReviewRevision: message.knowledgeReviewRevision,
     previousDirection: message.direction,
     direction: classifyEmailDirection(message.participants, ownedAddresses),
   }));
@@ -40,8 +42,8 @@ async function main() {
     await db.$transaction(
       changed.map((message) =>
         db.emailMessage.update({
-          where: { id: message.id },
-          data: { direction: message.direction },
+          where: { id: message.id, knowledgeReviewRevision: message.knowledgeReviewRevision },
+          data: { direction: message.direction, knowledgeReviewRevision: { increment: 1 } },
           select: { id: true },
         }),
       ),

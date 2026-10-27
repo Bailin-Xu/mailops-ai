@@ -11,6 +11,7 @@ async function main() {
   const messages = await db.emailMessage.findMany({
     select: {
       id: true,
+      knowledgeReviewRevision: true,
       normalizedBody: true,
       cleanBody: true,
       quotedContext: true,
@@ -35,8 +36,8 @@ async function main() {
 
     return [
       db.emailMessage.update({
-        where: { id: message.id },
-        data: { cleanBody: message.result.cleanBody, quotedContext },
+        where: { id: message.id, knowledgeReviewRevision: message.knowledgeReviewRevision },
+        data: { cleanBody: message.result.cleanBody, quotedContext, knowledgeReviewRevision: { increment: 1 } },
         select: { id: true },
       }),
     ];

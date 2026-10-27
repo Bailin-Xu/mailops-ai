@@ -8,6 +8,7 @@ import {
   saveCandidateReview,
 } from "@/lib/knowledge/candidate-review";
 import { splitKnowledgeCandidate } from "@/lib/knowledge/candidate-split";
+import { WorkflowConflictError } from "@/lib/workflow/transaction";
 
 type CandidateActionState = {
   status: "idle" | "success" | "error";
@@ -21,6 +22,7 @@ export async function reviewCandidateAction(
   try {
     const result = await saveCandidateReview({
       candidateId: formData.get("candidateId"),
+      expectedRevision: formData.get("expectedRevision"),
       decision: formData.get("decision"),
       title: formData.get("title"),
       canonicalQuestion: formData.get("canonicalQuestion"),
@@ -43,7 +45,7 @@ export async function reviewCandidateAction(
       message:
         error instanceof ZodError
           ? (error.issues[0]?.message ?? "Check the reviewed content.")
-          : "The candidate decision could not be saved. Refresh and try again.",
+          : error instanceof WorkflowConflictError ? error.message : "The candidate decision could not be saved. Refresh and try again.",
     };
   }
 }
@@ -72,7 +74,7 @@ export async function bulkApproveCandidatesAction(
       message:
         error instanceof ZodError
           ? (error.issues[0]?.message ?? "Confirm the bulk approval first.")
-          : "Bulk approval could not be completed. No partial changes were saved.",
+          : error instanceof WorkflowConflictError ? error.message : "Bulk approval could not be completed. No partial changes were saved.",
     };
   }
 }
@@ -92,6 +94,7 @@ export async function splitCandidateAction(
       : [];
     const result = await splitKnowledgeCandidate({
       candidateId: formData.get("candidateId"),
+      expectedRevision: formData.get("expectedRevision"),
       segments,
     });
     revalidatePath("/knowledge-candidates");
@@ -105,7 +108,7 @@ export async function splitCandidateAction(
       message:
         error instanceof ZodError
           ? (error.issues[0]?.message ?? "Check every split question and answer.")
-          : error instanceof Error && error.message.startsWith("Only a pending")
+          : error instanceof WorkflowConflictError ? error.message : error instanceof Error && error.message.startsWith("Only a pending")
             ? error.message
             : "The candidate could not be split. No partial changes were saved.",
     };

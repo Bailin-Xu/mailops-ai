@@ -35,7 +35,7 @@ describe("saveCandidateReview", () => {
   it("keeps traceability and deactivates knowledge when a candidate is later rejected", async () => {
     const candidate = await createCandidate();
     await saveCandidateReview(reviewInput(candidate.id, "APPROVED"), db);
-    await saveCandidateReview(reviewInput(candidate.id, "REJECTED"), db);
+    await saveCandidateReview({ ...reviewInput(candidate.id, "REJECTED"), expectedRevision: 1 }, db);
 
     await expect(db.knowledgeEntry.findUnique({ where: { sourceCandidateId: candidate.id } })).resolves.toMatchObject({ status: "INACTIVE" });
     await expect(db.knowledgeCandidateReviewEvent.count({ where: { candidateId: candidate.id } })).resolves.toBe(2);
@@ -78,6 +78,7 @@ async function createCandidate(title = "Synthetic gallery visit") {
 function reviewInput(candidateId: string, decision: "APPROVED" | "REJECTED") {
   return {
     candidateId,
+    expectedRevision: 0,
     decision,
     title: "Visite libre de la galerie",
     canonicalQuestion: "Faut-il réserver avant de visiter la galerie ?",

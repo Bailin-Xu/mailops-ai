@@ -179,7 +179,8 @@ export default async function WebsiteKnowledgePage({ searchParams }: PageProps) 
             <WebsiteReviewForm
               answer={data.selected.confirmedAnswer}
               itemId={data.selected.id}
-              key={data.selected.id}
+              revision={data.selected.revision}
+              key={`${data.selected.id}:${data.selected.revision}`}
               note={data.selected.reviewNote}
               reviewedAt={data.selected.reviewedAt?.toLocaleString("en-CA") ?? null}
               status={data.selected.status}

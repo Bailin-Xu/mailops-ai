@@ -272,12 +272,13 @@ export default async function KnowledgeSourcesPage({ searchParams }: PageProps) 
               )}
 
               <ReviewDecisionForm
-                key={data.selected.id}
+                key={`${data.selected.id}:${data.selected.knowledgeReviewRevision}`}
                 canApprove={
                   data.selected.direction === "OUTBOUND" &&
                   data.selected.cleanBody.trim().length > 0
                 }
                 messageId={data.selected.id}
+                revision={data.selected.knowledgeReviewRevision}
                 note={data.selected.knowledgeReviewNote}
                 reviewedAt={
                   data.selected.knowledgeReviewedAt

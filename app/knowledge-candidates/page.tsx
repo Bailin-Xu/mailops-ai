@@ -87,15 +87,16 @@ export default async function KnowledgeCandidatesPage({ searchParams }: PageProp
             <section className="candidate-proposal">
               <div><p>Proposed question</p><span>Untrusted until approved</span></div><h3>{data.selected.canonicalQuestion}</h3><p lang={data.selected.language}>{data.selected.proposedAnswer}</p>
             </section>
-            <CandidateReviewForm candidate={data.selected} key={data.selected.id} />
+            <CandidateReviewForm candidate={data.selected} key={`${data.selected.id}:${data.selected.revision}`} />
             {data.selected.status === "PENDING_REVIEW" ? (
               <CandidateSplitForm
                 candidateId={data.selected.id}
+                revision={data.selected.revision}
                 initialSegments={suggestCandidateSegments(
                   data.selected.canonicalQuestion,
                   data.selected.proposedAnswer,
                 )}
-                key={`split-${data.selected.id}`}
+                key={`split-${data.selected.id}:${data.selected.revision}`}
               />
             ) : null}
             <section className="candidate-sources">

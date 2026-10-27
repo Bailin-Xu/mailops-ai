@@ -17,6 +17,7 @@ const initialReviewActionState: Awaited<
 type ReviewDecisionFormProps = {
   canApprove: boolean;
   messageId: string;
+  revision: number;
   note: string | null;
   reviewedAt: string | null;
   status: KnowledgeReviewStatus;
@@ -25,6 +26,7 @@ type ReviewDecisionFormProps = {
 export function ReviewDecisionForm({
   canApprove,
   messageId,
+  revision,
   note,
   reviewedAt,
   status,
@@ -37,6 +39,7 @@ export function ReviewDecisionForm({
   return (
     <form action={formAction} className="human-review-card">
       <input name="messageId" type="hidden" value={messageId} />
+      <input name="expectedRevision" type="hidden" value={revision} />
       <div className="human-review-heading">
         <div>
           <p>Human decision</p>

@@ -13,6 +13,7 @@ const initialState: Awaited<ReturnType<typeof reviewWebsiteKnowledgeAction>> = {
 type WebsiteReviewFormProps = {
   answer: string | null;
   itemId: string;
+  revision: number;
   note: string | null;
   reviewedAt: string | null;
   status: WebsiteReviewStatus;
@@ -21,6 +22,7 @@ type WebsiteReviewFormProps = {
 export function WebsiteReviewForm({
   answer,
   itemId,
+  revision,
   note,
   reviewedAt,
   status,
@@ -33,6 +35,7 @@ export function WebsiteReviewForm({
   return (
     <form action={formAction} className="web-decision-card">
       <input name="reviewItemId" type="hidden" value={itemId} />
+      <input name="expectedRevision" type="hidden" value={revision} />
       <div className="web-decision-heading">
         <div>
           <p>Owner-confirmed policy</p>

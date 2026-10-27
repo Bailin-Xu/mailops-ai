@@ -167,8 +167,12 @@ records implemented capabilities, incomplete workflows, and planned additions fo
 AI application, full-stack, and backend portfolio directions. It defines tasks,
 dependencies, and acceptance criteria for six phases: complete the shared baseline,
 state correctness, and knowledge-version work first, then select a specialization.
-Phase 0 establishes the reproducible baseline; its evidence and current status are
-recorded in the plan. The next implementation phase is state correctness (Phase 1).
+Phases 0 and 1 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
+documents stale-draft protection, safe replacement, review revision conflicts, and
+legacy-data behavior. Apply existing migrations with `npm run db:deploy` before
+using an updated checkout; old pending results without provenance require a new
+classification attempt. The next implementation phase is knowledge versions and
+draft evidence (Phase 2).
 Future integration designs do not represent completed functionality.
 
 The future Gmail, Discord, Artur-reference, delayed-send, concurrency, and privacy

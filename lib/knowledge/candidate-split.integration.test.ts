@@ -59,6 +59,7 @@ describe("splitKnowledgeCandidate", () => {
     const result = await splitKnowledgeCandidate(
       {
         candidateId: parent.id,
+        expectedRevision: 0,
         segments: [
           { title: "First answer", canonicalQuestion: "Quelle est la première règle ?", proposedAnswer: "Voici la première réponse." },
           { title: "Second answer", canonicalQuestion: "Quelle est la deuxième règle ?", proposedAnswer: "Voici la deuxième réponse." },

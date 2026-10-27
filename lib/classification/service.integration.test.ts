@@ -48,6 +48,7 @@ describe("classification workflow", () => {
 
     const reviewed = await reviewClassification({
       classificationId: classification.id,
+      expectedRevision: classification.revision,
       category: "KNOWN_QUESTION",
       note: "Corrected after reading the original French message.",
     }, db);

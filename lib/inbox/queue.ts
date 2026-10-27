@@ -82,7 +82,7 @@ export async function getMockInboxQueue(
         include: { participants: true, attachments: true },
       },
       classifications: {
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ threadRevision: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }, { id: "desc" }],
         take: 1,
         include: {
           aiExecution: true,

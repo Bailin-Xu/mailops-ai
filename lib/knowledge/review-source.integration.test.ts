@@ -26,11 +26,11 @@ describe("saveKnowledgeSourceReview", () => {
     const message = await createMessage("OUTBOUND", "A reusable answer with enough detail.");
 
     await saveKnowledgeSourceReview(
-      { messageId: message.id, decision: "NEEDS_FOLLOW_UP", note: "Confirm price." },
+      { messageId: message.id, expectedRevision: 0, decision: "NEEDS_FOLLOW_UP", note: "Confirm price." },
       db,
     );
     await saveKnowledgeSourceReview(
-      { messageId: message.id, decision: "APPROVED", note: "Price confirmed." },
+      { messageId: message.id, expectedRevision: 1, decision: "APPROVED", note: "Price confirmed." },
       db,
     );
 
@@ -55,7 +55,7 @@ describe("saveKnowledgeSourceReview", () => {
 
     await expect(
       saveKnowledgeSourceReview(
-        { messageId: message.id, decision: "APPROVED", note: "" },
+        { messageId: message.id, expectedRevision: 0, decision: "APPROVED", note: "" },
         db,
       ),
     ).rejects.toThrow("Only an outbound message");

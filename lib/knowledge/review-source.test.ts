@@ -7,11 +7,13 @@ describe("knowledge source human review", () => {
     expect(
       parseKnowledgeSourceReview({
         messageId: "7fd2c66c-75df-4523-8ca7-9b6c8bf85cf0",
+        expectedRevision: 0,
         decision: "APPROVED",
         note: "   ",
       }),
     ).toEqual({
       messageId: "7fd2c66c-75df-4523-8ca7-9b6c8bf85cf0",
+      expectedRevision: 0,
       decision: "APPROVED",
       note: null,
     });
@@ -21,6 +23,7 @@ describe("knowledge source human review", () => {
     expect(() =>
       parseKnowledgeSourceReview({
         messageId: "not-an-id",
+        expectedRevision: 0,
         decision: "PENDING",
         note: "x".repeat(1001),
       }),

@@ -41,8 +41,8 @@ export async function ingestAndProcessEml(
       classificationId: classification.id,
     };
   } catch {
-    await db.emailThread.update({
-      where: { id: ingestion.threadId },
+    await db.emailThread.updateMany({
+      where: { id: ingestion.threadId, workflowRevision: 0, status: "NEW" },
       data: { status: "AUTOMATIC_PROCESSING_FAILED" },
     });
     return { ingestion, processing: "FAILED" as const, classificationId: null };

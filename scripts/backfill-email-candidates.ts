@@ -17,6 +17,7 @@ async function main() {
     },
     select: {
       id: true,
+      revision: true,
       title: true,
       canonicalQuestion: true,
       proposedAnswer: true,
@@ -54,6 +55,7 @@ async function main() {
     });
     return {
       id: candidate.id,
+      revision: candidate.revision,
       cleaned,
       changed:
         cleaned.canonicalQuestion !== candidate.canonicalQuestion ||
@@ -70,8 +72,9 @@ async function main() {
     await db.$transaction(
       changed.map((result) =>
         db.knowledgeCandidate.update({
-          where: { id: result.id, status: "PENDING_REVIEW" },
+          where: { id: result.id, status: "PENDING_REVIEW", revision: result.revision },
           data: {
+            revision: { increment: 1 },
             canonicalQuestion: result.cleaned.canonicalQuestion,
             proposedAnswer: result.cleaned.proposedAnswer,
           },

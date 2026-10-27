@@ -17,9 +17,11 @@ const initialState: Awaited<ReturnType<typeof splitCandidateAction>> = {
 
 export function CandidateSplitForm({
   candidateId,
+  revision,
   initialSegments,
 }: {
   candidateId: string;
+  revision: number;
   initialSegments: Segment[];
 }) {
   const [open, setOpen] = useState(false);
@@ -66,6 +68,7 @@ export function CandidateSplitForm({
       {open ? (
         <form action={action} className="candidate-split-workspace">
           <input name="candidateId" type="hidden" value={candidateId} />
+          <input name="expectedRevision" type="hidden" value={revision} />
           <input name="segmentCount" type="hidden" value={segments.length} />
           <div className="candidate-split-rail" aria-hidden="true">
             <span>Combined source</span><b>→</b><strong>{segments.length} atomic candidates</strong>

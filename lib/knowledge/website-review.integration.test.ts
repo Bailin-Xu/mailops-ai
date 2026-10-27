@@ -36,6 +36,7 @@ describe("saveWebsiteKnowledgeReview", () => {
     const result = await saveWebsiteKnowledgeReview(
       {
         reviewItemId: item.id,
+        expectedRevision: 0,
         decision: "CONFIRMED",
         confirmedAnswer: "La règle confirmée s'applique à tous les nouveaux dossiers.",
         note: "Confirmed for integration test.",

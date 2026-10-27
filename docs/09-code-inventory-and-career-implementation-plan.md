@@ -2,7 +2,7 @@
 
 Assessment date: **2026-10-27**.
 
-Status: **Phase 0 complete (2026-10-27); Phases 1–5 not started.**
+Status: **Phases 0 and 1 complete (2026-10-27); Phases 2–5 not started.**
 
 ## 1. Purpose and Scope
 
@@ -166,7 +166,7 @@ dependencies. Shared work, such as pagination, should be implemented once.
 | Phase | Objective | Dependency | Status |
 | --- | --- | --- | --- |
 | 0 | Reproducible development and demo baseline | None | Complete; evidence in Section 8 |
-| 1 | Correct state transitions and safe replacement | Phase 0 | Not started |
+| 1 | Correct state transitions and safe replacement | Phase 0 | Complete; evidence in Section 9 |
 | 2 | Versioned knowledge and immutable evidence | Phase 1 | Not started |
 | 3 | AI evaluation demonstration | Phase 2 | Not started |
 | 4 | Full-stack revision workflow demonstration | Phase 2 | Not started |
@@ -206,15 +206,15 @@ configuration, CI checks, and a short requirements reconciliation record.
 
 **Tasks**
 
-- [ ] P1-T1: Define the minimal draft/review transition rules and identify the
+- [x] P1-T1: Define the minimal draft/review transition rules and identify the
   current classification and inbound-message context for each draft.
-- [ ] P1-T2: Reject confirmation of drafts from superseded classification or
+- [x] P1-T2: Reject confirmation of drafts from superseded classification or
   changed inbound context, and drafts whose required knowledge is no longer active.
-- [ ] P1-T3: Persist successful replacement drafts before atomically superseding
+- [x] P1-T3: Persist successful replacement drafts before atomically superseding
   previous ones; failed attempts preserve original output and failure metadata.
-- [ ] P1-T4: Add conditional writes/revision checks to manual answers,
+- [x] P1-T4: Add conditional writes/revision checks to manual answers,
   classification correction, and knowledge review. Define conflict feedback.
-- [ ] P1-T5: Add regression tests for duplicate submission, concurrent editing,
+- [x] P1-T5: Add regression tests for duplicate submission, concurrent editing,
   model failure, old browser tabs, and terminal-state behavior.
 
 **Acceptance criteria**
@@ -392,7 +392,7 @@ Use the following evidence fields when closing a phase:
 | Limitations | Known risks, unverified behavior, and scope exclusions |
 | Next step | Eligible phase or explicitly scoped follow-up |
 
-**Next planned implementation step: Phase 1.** Phases 1–5 remain unstarted.
+**Next planned implementation step: Phase 2.** Phases 2–5 remain unstarted.
 
 ## 8. Phase 0 Closure — 2026-10-27
 
@@ -431,3 +431,29 @@ Verification notes and limitations:
   of the development database and persistent volume.
 - No Git commit or push was made. The pre-existing productization/agentic roadmap
   files were not modified by Phase 0.
+
+## 9. Phase 1 Closure — 2026-10-27
+
+Tasks P1-T1 through P1-T5 are complete. Transition rules, concurrency policy,
+historical-data handling, and criterion-to-test mappings are recorded in the
+[Phase 1 verification guide](11-phase-1-state-consistency-and-verification.md).
+
+- Validity markers bind classifications to inbound context and drafts to the
+  classification revision and unchanged active knowledge. Legacy pending data
+  lacking proof requires explicit reclassification; confirmed history is retained.
+- Successful replacements supersede old drafts atomically. Failed attempts preserve
+  content, record validation/failure metadata, and cannot overwrite newer work.
+- Conditional writes and serializable transactions protect reviews, manual answers,
+  replacements, and simulated confirmations. Stale submissions receive recoverable
+  feedback. False spam results remain human-correctable.
+- `npm run check` passed: lint, types, **112 offline tests**, and production build.
+  The full isolated integration suite passed **61 tests in 14 files** with its
+  database sentinel unchanged. Prisma generation/schema validation also passed.
+- Migration `20261027183000_add_workflow_consistency` was tested from a fresh
+  isolated database and then applied to the guarded local development database.
+  It adds metadata only and does not invent historical provenance.
+- UI revision-token plumbing and regeneration feedback were implemented; browser
+  end-to-end tests remain unrun because Playwright is not configured. Immutable
+  knowledge revisions and richer conflict UI remain Phases 2 and 4 respectively.
+- No Git commit/push or live model call was made for this phase. The pre-existing
+  `07`/`08` roadmap files remain untouched.

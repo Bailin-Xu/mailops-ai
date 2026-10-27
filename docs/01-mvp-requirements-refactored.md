@@ -423,6 +423,12 @@ The user shall be able to retry classification after a provider or validation fa
 
 A deliberate retry shall create a new execution record.
 
+Phase 1 enforces input/revision validity before accepting results. Failed
+regeneration preserves a prior valid reference reply; a successful replacement
+supersedes it atomically. A stale or competing operation requires refresh/review
+instead of silently replaying a human decision. See the
+[state consistency rules](11-phase-1-state-consistency-and-verification.md).
+
 ## 5.3 Bilingual Assistance
 
 ### AIR-020 — Detect language
@@ -650,6 +656,12 @@ The exact approved subject and body shall be stored.
 ### FR-080 — Simulate send
 
 A human shall be able to confirm a generated reference draft and mark it simulated sent in one action.
+
+Confirmation must validate the current classification revision, inbound context,
+and unchanged active grounding. Old browser submissions and duplicate concurrent
+confirmations must not overwrite the winning final text or reopen a finalized
+response for the same input. Historical pending results without provable context
+require a fresh classification; confirmed history is preserved.
 
 ### FR-081 — Never send real email
 

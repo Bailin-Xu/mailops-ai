@@ -218,6 +218,7 @@ describe("automatic processing", () => {
 
     await correctAndResumeProcessing({
       classificationId: classification.id,
+      expectedRevision: classification.revision,
       category: "BUSINESS_PARTNERSHIP",
       note: "Human corrected this to a partnership request with no approved answer.",
     }, new MockAIProvider(), db);
@@ -230,6 +231,7 @@ describe("automatic processing", () => {
 
     await submitManualAnswer({
       classificationId: classification.id,
+      expectedRevision: (await db.classification.findUniqueOrThrow({ where: { id: classification.id } })).revision,
       body: "A human-verified synthetic answer.",
       createCandidate: true,
     }, db);

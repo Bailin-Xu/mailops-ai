@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
+import { WorkflowConflictError } from "@/lib/workflow/transaction";
 
 import {
   KnowledgeSourceReviewError,
@@ -20,6 +21,7 @@ export async function reviewKnowledgeSourceAction(
   try {
     const result = await saveKnowledgeSourceReview({
       messageId: formData.get("messageId"),
+      expectedRevision: formData.get("expectedRevision"),
       decision: formData.get("decision"),
       note: formData.get("note"),
     });
@@ -41,7 +43,7 @@ export async function reviewKnowledgeSourceAction(
     return {
       status: "error",
       message:
-        error instanceof KnowledgeSourceReviewError
+        error instanceof KnowledgeSourceReviewError || error instanceof WorkflowConflictError
           ? error.message
           : "The review could not be saved. Refresh the page and try again.",
     };

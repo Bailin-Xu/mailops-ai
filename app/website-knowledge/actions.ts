@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 
 import { saveWebsiteKnowledgeReview } from "@/lib/knowledge/website-review";
+import { WorkflowConflictError } from "@/lib/workflow/transaction";
 
 type WebsiteReviewActionState = {
   status: "idle" | "success" | "error";
@@ -17,6 +18,7 @@ export async function reviewWebsiteKnowledgeAction(
   try {
     const result = await saveWebsiteKnowledgeReview({
       reviewItemId: formData.get("reviewItemId"),
+      expectedRevision: formData.get("expectedRevision"),
       decision: formData.get("decision"),
       confirmedAnswer: formData.get("confirmedAnswer"),
       note: formData.get("note"),
@@ -40,7 +42,7 @@ export async function reviewWebsiteKnowledgeAction(
     return {
       status: "error",
       message:
-        error instanceof Error
+        error instanceof WorkflowConflictError || (error instanceof Error && error.message === "The selected website review item no longer exists.")
           ? error.message
           : "The website review could not be saved.",
     };

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
+import { revisionSchema, workflowTransaction } from "@/lib/workflow/transaction";
 
 export const candidateDecisionValues = ["APPROVED", "REJECTED"] as const;
 export const candidateStatusValues = [
@@ -22,6 +23,7 @@ export function candidateStatusLabel(status: CandidateStatus) {
 
 const candidateReviewSchema = z.object({
   candidateId: z.string().uuid(),
+  expectedRevision: revisionSchema,
   decision: z.enum(candidateDecisionValues),
   title: z.string().trim().min(3, "Add a clear title.").max(200),
   canonicalQuestion: z
@@ -62,7 +64,7 @@ export async function saveCandidateReview(
   const review = parseCandidateReview(input);
   const reviewedAt = new Date();
 
-  return db.$transaction(async (transaction) => {
+  return workflowTransaction(db, async (transaction) => {
     const candidate = await transaction.knowledgeCandidate.findUnique({
       where: { id: review.candidateId },
       select: { id: true },
@@ -70,8 +72,9 @@ export async function saveCandidateReview(
     if (!candidate) throw new Error("The selected candidate no longer exists.");
 
     const updated = await transaction.knowledgeCandidate.update({
-      where: { id: review.candidateId },
+      where: { id: review.candidateId, revision: review.expectedRevision },
       data: {
+        revision: { increment: 1 },
         status: review.decision,
         reviewedTitle: review.title,
         reviewedQuestion: review.canonicalQuestion,
@@ -138,7 +141,7 @@ export async function approvePendingCandidatesInView(
   const approval = parseBulkCandidateApproval(input);
   const reviewedAt = new Date();
 
-  return db.$transaction(async (transaction) => {
+  return workflowTransaction(db, async (transaction) => {
     const candidates = await transaction.knowledgeCandidate.findMany({
       where: {
         status: "PENDING_REVIEW",
@@ -167,6 +170,7 @@ export async function approvePendingCandidatesInView(
       },
       select: {
         id: true,
+        revision: true,
         title: true,
         canonicalQuestion: true,
         proposedAnswer: true,
@@ -179,8 +183,9 @@ export async function approvePendingCandidatesInView(
       const language = candidate.language === "en" ? "en" : "fr";
       const note = `Bulk-approved by a human from the ${approval.source.toLowerCase()} candidate view.`;
       await transaction.knowledgeCandidate.update({
-        where: { id: candidate.id },
+        where: { id: candidate.id, revision: candidate.revision, status: "PENDING_REVIEW" },
         data: {
+          revision: { increment: 1 },
           status: "APPROVED",
           reviewedTitle: candidate.title,
           reviewedQuestion: candidate.canonicalQuestion,

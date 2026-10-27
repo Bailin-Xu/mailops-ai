@@ -9,7 +9,7 @@ describe("website knowledge review", () => {
     expect(() =>
       parseWebsiteKnowledgeReview({
         reviewItemId,
-        decision: "CONFIRMED",
+        expectedRevision: 0,        decision: "CONFIRMED",
         confirmedAnswer: "   ",
         note: "",
       }),
@@ -20,12 +20,13 @@ describe("website knowledge review", () => {
     expect(
       parseWebsiteKnowledgeReview({
         reviewItemId,
-        decision: "NEEDS_FOLLOW_UP",
+        expectedRevision: 0,        decision: "NEEDS_FOLLOW_UP",
         confirmedAnswer: " partial answer ",
         note: "   ",
       }),
     ).toEqual({
       reviewItemId,
+      expectedRevision: 0,
       decision: "NEEDS_FOLLOW_UP",
       confirmedAnswer: "partial answer",
       note: null,

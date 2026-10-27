@@ -8,6 +8,7 @@ import {
 describe("parseCandidateReview", () => {
   const valid = {
     candidateId: "4beedb6b-7ff3-4d3c-b97f-cb9f0ca5acbf",
+    expectedRevision: 0,
     decision: "APPROVED",
     title: "Gallery visits",
     canonicalQuestion: "Faut-il réserver avant de visiter la galerie ?",

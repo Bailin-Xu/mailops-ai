@@ -18,6 +18,7 @@ model EmailThread {
   wordpressId       String?
   artistEmail       String?
   isIncomplete      Boolean        @default(false)
+  workflowRevision  Int            @default(0)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   messages          EmailMessage[]
@@ -57,6 +58,7 @@ model EmailMessage {
   knowledgeReviewStatus     KnowledgeReviewStatus        @default(PENDING)
   knowledgeReviewNote       String?
   knowledgeReviewedAt       DateTime?
+  knowledgeReviewRevision   Int                          @default(0)
   sourceFileName            String
   fingerprint               String                       @unique
   parseStatus               String                       @default("PARSED")
@@ -204,6 +206,9 @@ model Classification {
   knowledgeQuery      String?
   knowledgeMatchCount Int                        @default(0)
   simulatedForwardedAt DateTime?
+  threadRevision      Int?
+  revision            Int                        @default(0)
+  sourceContextHash   String?
   createdAt           DateTime                   @default(now())
   thread              EmailThread                @relation(fields: [threadId], references: [id], onDelete: Restrict)
   aiExecution         AIExecution                @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
@@ -265,6 +270,7 @@ model KnowledgeCandidate {
   reviewedLanguage  String?
   reviewNote        String?
   reviewedAt        DateTime?
+  revision          Int                             @default(0)
   parentCandidateId String?                         @db.Uuid
   createdAt         DateTime                        @default(now())
   updatedAt         DateTime                        @updatedAt
@@ -365,6 +371,7 @@ model Draft {
   approvedLanguage String?
   approvedAt       DateTime?
   simulatedSentAt  DateTime?
+  classificationRevision Int?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   thread           EmailThread   @relation(fields: [threadId], references: [id], onDelete: Restrict)
@@ -496,6 +503,7 @@ model DraftKnowledgeSource {
   knowledgeEntryId String         @db.Uuid
   rank             Int
   relevanceScore   Float
+  knowledgeFingerprint String?
   draft            Draft          @relation(fields: [draftId], references: [id], onDelete: Cascade)
   knowledgeEntry   KnowledgeEntry @relation(fields: [knowledgeEntryId], references: [id], onDelete: Restrict)
 
@@ -513,6 +521,7 @@ model WebsiteKnowledgeReviewItem {
   confirmedAnswer  String?
   reviewNote       String?
   reviewedAt       DateTime?
+  revision         Int                           @default(0)
   createdAt        DateTime                      @default(now())
   updatedAt        DateTime                      @updatedAt
   evidence         WebsiteKnowledgeEvidence[]
