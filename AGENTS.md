@@ -30,7 +30,7 @@ Do not implement future enterprise integrations unless explicitly requested.
 Read only the documents relevant to the current task:
 
 - `docs/00-project-overview.md`
-- `docs/01-mvp-requirements.md`
+- `docs/01-mvp-requirements-refactored.md`
 - `docs/02-user-workflows.md`
 - `docs/03-domain-model.md`
 - `docs/04-ai-and-knowledge-design.md`

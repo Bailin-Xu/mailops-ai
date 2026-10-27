@@ -45,7 +45,10 @@ AIProvider Interface
     └── MockAIProvider
 ```
 
-The provider interface should expose task-focused methods such as:
+The current provider contract exposes `classifyEmail` and `generateDraft`, with
+execution metadata available through an optional accessor. The following is a
+future interface sketch, not a list of implemented methods. French translation
+and AI knowledge-candidate extraction remain deferred:
 
 ```ts
 interface AIProvider {

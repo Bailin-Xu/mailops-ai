@@ -620,7 +620,7 @@ The user shall be able to edit:
 
 ### FR-076 — Review draft
 
-Draft status shall include:
+The target review lifecycle shall support:
 
 - `GENERATED`;
 - `GENERATION_FAILED`;
@@ -630,6 +630,16 @@ Draft status shall include:
 - `SIMULATED_SENT`.
 
 The user shall be able to approve, reject, or regenerate a draft.
+
+**Implementation baseline (2026-10-27):** persisted draft states currently are
+`GENERATED`, `SUPERSEDED`, and `SIMULATED_SENT`. Generation failures are recorded
+in AI executions and classification processing status. Editing is currently an
+unsaved form operation until final confirmation; approval and simulated sending
+are combined as specified by FR-080. Independent saved edits, approval, and
+rejection are target capabilities, not completed behavior. Phases 1 and 4 of the
+[implementation plan](09-code-inventory-and-career-implementation-plan.md) will
+define and implement the minimal consistent lifecycle. Phase 0 changes no review
+or sending policy.
 
 ### FR-077 — Preserve final text
 

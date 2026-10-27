@@ -1,0 +1,40 @@
+name: Quality checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres-test:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mailops_test
+          POSTGRES_USER: mailops_test
+          POSTGRES_PASSWORD: mailops_test_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mailops_test -d mailops_test"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://mailops:unused@127.0.0.1:5433/mailops
+      TEST_DATABASE_URL: postgresql://mailops_test:mailops_test_ci@127.0.0.1:5432/mailops_test?schema=public
+      AI_PROVIDER: mock
+      SHADOW_MODE: "true"
+      EXTERNAL_DELIVERY_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:integration

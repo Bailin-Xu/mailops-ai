@@ -20,7 +20,8 @@ cp .env.example .env
 npm install
 docker compose up -d
 npm run db:validate
-npm run db:migrate -- --name init
+npm run db:deploy
+npm run demo:seed
 npm run dev
 ```
 
@@ -36,7 +37,9 @@ is deliberately excluded from the data model; only safe metadata is persisted.
 ```bash
 npm run lint          # ESLint
 npm run typecheck     # TypeScript strict-mode check
-npm run test          # Vitest test suite
+npm run test          # Offline tests only; no database or external service calls
+npm run test:integration # Migrate the explicit test DB and run every integration test
+npm run demo:seed     # Neutral EN/FR demo mail plus pre-approved synthetic knowledge; no AI calls
 npm run eml:scan      # Aggregate-only scan of private local EML files
 npm run eml:import    # Import a private local EML directory and auto-process inbound mail with Mock AI
 npm run eml:demo:seed # Import three synthetic known-question emails without calling AI
@@ -45,9 +48,10 @@ npm run ai:gemini:smoke # Two synthetic Gemini calls; never uses stored email
 npm run ai:eval:synthetic # Run the 12-message synthetic Shadow Mode acceptance set
 npm run ai:eval:holdout # Run or resume the frozen 8-message holdout without repeating calls
 npm run build         # Production build
-npm run check         # All required quality checks
+npm run check         # Lint, types, offline tests, build; run integration separately
 npm run db:generate   # Regenerate Prisma Client
 npm run db:migrate    # Create/apply a development migration
+npm run db:deploy     # Apply existing migrations (fresh setup and CI)
 npm run db:studio     # Inspect local data
 docker compose down   # Stop PostgreSQL without deleting its volume
 ```
@@ -63,6 +67,46 @@ synthetic or safely redacted messages.
 
 The container publishes PostgreSQL on host port `5433` to avoid clashing with a
 PostgreSQL installation that may already be using the conventional port `5432`.
+
+## Reproducible demo and isolated tests
+
+`npm run demo:seed` adds four neutral synthetic emails (English/French tracked
+shipping questions, an upload issue, and an ambiguous inquiry) and two matching
+pre-approved synthetic knowledge records. It never calls AI and preserves later
+reviewer edits when rerun. Run each email manually in Inbox with `AI_PROVIDER=mock`.
+See the [Phase 0 baseline guide](docs/10-phase-0-baseline-and-verification.md) for
+expected routes, reset boundaries, requirement reconciliation, and test evidence.
+
+Start the separate, disposable PostgreSQL service before integration checks:
+
+```bash
+docker compose --profile test up -d --wait postgres-test
+```
+
+Set `TEST_DATABASE_URL` using the dedicated local URL in `.env.example` (copy this
+line into an existing ignored `.env`, or export it in your shell), then run:
+
+```bash
+npm run test:integration
+npm run check
+```
+
+Integration checks require a loopback database and role both named `mailops_test`,
+reject the development database as a target, apply existing migrations, and verify
+an unchanged marker in a separate synthetic sentinel database. They never fall
+back to `DATABASE_URL`. The dedicated local test role needs `CREATEDB` permission
+for this marker database; the supplied disposable container provides it. Both test
+setups disable live model calls; adapter tests inject their own mocked responses.
+
+The test container uses temporary storage. Stop it with
+`docker compose --profile test stop postgres-test`; stopping discards its data.
+Restart it and rerun `npm run test:integration` to recreate the schema. This does
+not stop or reset the development `postgres` service or its persistent volume.
+
+CI runs the same offline/build and complete integration commands against a fresh
+PostgreSQL service. Live-model smoke/evaluation commands remain explicit opt-in
+commands; they are excluded from automated checks and require synthetic/redacted
+inputs. No Gemini key is needed for normal checks.
 
 ## Local EML validation
 
@@ -115,6 +159,17 @@ aggregate counts only and deliberately does not use subject-based fallback match
 
 Vector embeddings are deliberately deferred until the keyword/PostgreSQL retrieval
 baseline works and can be evaluated. This makes later RAG improvements measurable.
+
+## Implementation plan
+
+The [code inventory and career implementation plan](docs/09-code-inventory-and-career-implementation-plan.md)
+records implemented capabilities, incomplete workflows, and planned additions for
+AI application, full-stack, and backend portfolio directions. It defines tasks,
+dependencies, and acceptance criteria for six phases: complete the shared baseline,
+state correctness, and knowledge-version work first, then select a specialization.
+Phase 0 establishes the reproducible baseline; its evidence and current status are
+recorded in the plan. The next implementation phase is state correctness (Phase 1).
+Future integration designs do not represent completed functionality.
 
 The future Gmail, Discord, Artur-reference, delayed-send, concurrency, and privacy
 architecture is documented in
