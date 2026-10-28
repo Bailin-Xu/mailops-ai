@@ -597,6 +597,14 @@ A small synthetic or redacted evaluation set is sufficient for the MVP.
 
 The evaluation dataset must remain separate from approved knowledge used during testing.
 
+Phase 3 adds a separate local benchmark over frozen synthetic knowledge revisions,
+with new run identities, explicit resume, tuning/holdout separation, shared real
+PostgreSQL retrieval, and case-level scorecards. A bounded conflict-abstention rule
+is evaluated without changing production routing. Exact-claim/language checks are
+conservative proxies, not semantic/model-judge scores; mock runs are software
+behavior checks. Missing usage metadata stays unknown. See the
+[evaluation contract and recorded limitations](13-phase-3-ai-evaluation.md).
+
 ---
 
 ## 20. Deferred AI Features

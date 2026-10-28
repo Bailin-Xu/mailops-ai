@@ -1,0 +1,902 @@
+{
+  "recordedAt": "2026-10-28",
+  "purpose": "Synthetic mock software behavior checks only; no live model quality or cost claim. Latencies are local samples, not benchmark speedups.",
+  "comparisons": [
+    {
+      "baseline": {
+        "runId": "35733124-6242-405b-9834-c2d59e1ce8a6",
+        "fingerprint": "b41a40698dd8a194b29c122135183b4cb89999143ada13319237983b82236f34",
+        "dataset": "synthetic-bilingual-v1",
+        "split": "tuning",
+        "label": "MOCK SOFTWARE BEHAVIOR CHECK — NOT MODEL QUALITY",
+        "provider": {
+          "id": "mock",
+          "model": "deterministic-rules-v5",
+          "classificationPromptVersion": "classification-mock-v5",
+          "draftPromptVersion": "dorian-reference-mock-v3"
+        },
+        "config": {
+          "retrieval": "baseline-v1",
+          "k": 8,
+          "minRoutingAccuracy": 1,
+          "maxMissedEscalationRate": 0
+        },
+        "graderVersion": "exact-claims-language-v1",
+        "implementationHash": "1c478e8e1b77acf7e8514b007cc9d08ed3a2d41d51948f01fa5388c6825d239c",
+        "postgresVersion": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+        "counts": {
+          "expected": 8,
+          "completed": 8,
+          "executionFailed": 0
+        },
+        "metrics": {
+          "routingAccuracy": {
+            "numerator": 5,
+            "denominator": 8,
+            "value": 0.625
+          },
+          "missedEscalationRate": {
+            "numerator": 2,
+            "denominator": 5,
+            "value": 0.4
+          },
+          "falseEscalationRate": {
+            "numerator": 0,
+            "denominator": 3,
+            "value": 0
+          },
+          "recallAtK": {
+            "numerator": 5,
+            "denominator": 5,
+            "value": 1
+          },
+          "factualSupport": {
+            "numerator": 3,
+            "denominator": 5,
+            "value": 0.6
+          },
+          "supportedClaimCoverage": {
+            "numerator": 3,
+            "denominator": 3,
+            "value": 1
+          },
+          "languageConsistency": {
+            "numerator": 8,
+            "denominator": 8,
+            "value": 1
+          },
+          "executionFailureRate": {
+            "numerator": 0,
+            "denominator": 8,
+            "value": 0
+          }
+        },
+        "latency": {
+          "measuredCases": 8,
+          "meanMs": 4.390833499999999,
+          "providerCalls": 13,
+          "providerMeanMs": 0.15468261538461986
+        },
+        "tokens": {
+          "input": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 13,
+            "completeTotal": null
+          },
+          "output": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 13,
+            "completeTotal": null
+          },
+          "total": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 13,
+            "completeTotal": null
+          }
+        },
+        "exitCode": 1
+      },
+      "candidate": {
+        "runId": "31ee39d8-7cf0-4e29-8290-3c9ac3b86a49",
+        "fingerprint": "03d656c24df7f6617548ab8f0a81d05f17906f99a69d68e71e29d3aac5d55e79",
+        "dataset": "synthetic-bilingual-v1",
+        "split": "tuning",
+        "label": "MOCK SOFTWARE BEHAVIOR CHECK — NOT MODEL QUALITY",
+        "provider": {
+          "id": "mock",
+          "model": "deterministic-rules-v5",
+          "classificationPromptVersion": "classification-mock-v5",
+          "draftPromptVersion": "dorian-reference-mock-v3"
+        },
+        "config": {
+          "retrieval": "conflict-abstain-v1",
+          "k": 8,
+          "minRoutingAccuracy": 1,
+          "maxMissedEscalationRate": 0
+        },
+        "graderVersion": "exact-claims-language-v1",
+        "implementationHash": "1c478e8e1b77acf7e8514b007cc9d08ed3a2d41d51948f01fa5388c6825d239c",
+        "postgresVersion": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+        "counts": {
+          "expected": 8,
+          "completed": 8,
+          "executionFailed": 0
+        },
+        "metrics": {
+          "routingAccuracy": {
+            "numerator": 6,
+            "denominator": 8,
+            "value": 0.75
+          },
+          "missedEscalationRate": {
+            "numerator": 1,
+            "denominator": 5,
+            "value": 0.2
+          },
+          "falseEscalationRate": {
+            "numerator": 0,
+            "denominator": 3,
+            "value": 0
+          },
+          "recallAtK": {
+            "numerator": 5,
+            "denominator": 5,
+            "value": 1
+          },
+          "factualSupport": {
+            "numerator": 3,
+            "denominator": 4,
+            "value": 0.75
+          },
+          "supportedClaimCoverage": {
+            "numerator": 3,
+            "denominator": 3,
+            "value": 1
+          },
+          "languageConsistency": {
+            "numerator": 8,
+            "denominator": 8,
+            "value": 1
+          },
+          "executionFailureRate": {
+            "numerator": 0,
+            "denominator": 8,
+            "value": 0
+          }
+        },
+        "latency": {
+          "measuredCases": 8,
+          "meanMs": 3.152302125000002,
+          "providerCalls": 12,
+          "providerMeanMs": 0.1625520833333359
+        },
+        "tokens": {
+          "input": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 12,
+            "completeTotal": null
+          },
+          "output": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 12,
+            "completeTotal": null
+          },
+          "total": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 12,
+            "completeTotal": null
+          }
+        },
+        "exitCode": 1
+      },
+      "improvements": [
+        "conflict-en"
+      ],
+      "regressions": [],
+      "cases": [
+        {
+          "id": "shipping-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "livraison-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "unknown-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": false,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": false,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "ambiguous-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "conflict-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "HUMAN_ANSWER_QUEUE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "IMPROVED",
+          "changed": true
+        },
+        {
+          "id": "injection-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "technical-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "TECHNICAL_QUEUE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "TECHNICAL_QUEUE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "language-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        }
+      ]
+    },
+    {
+      "baseline": {
+        "runId": "f8f6fc86-467b-444e-803c-2abce625cf75",
+        "fingerprint": "4b54fcedd68323d225843234082778675cf43131c7c49800ad21bf531fa15b0b",
+        "dataset": "synthetic-bilingual-v1",
+        "split": "holdout",
+        "label": "MOCK SOFTWARE BEHAVIOR CHECK — NOT MODEL QUALITY",
+        "provider": {
+          "id": "mock",
+          "model": "deterministic-rules-v5",
+          "classificationPromptVersion": "classification-mock-v5",
+          "draftPromptVersion": "dorian-reference-mock-v3"
+        },
+        "config": {
+          "retrieval": "baseline-v1",
+          "k": 8,
+          "minRoutingAccuracy": 1,
+          "maxMissedEscalationRate": 0
+        },
+        "graderVersion": "exact-claims-language-v1",
+        "implementationHash": "1c478e8e1b77acf7e8514b007cc9d08ed3a2d41d51948f01fa5388c6825d239c",
+        "postgresVersion": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+        "counts": {
+          "expected": 8,
+          "completed": 8,
+          "executionFailed": 0
+        },
+        "metrics": {
+          "routingAccuracy": {
+            "numerator": 4,
+            "denominator": 8,
+            "value": 0.5
+          },
+          "missedEscalationRate": {
+            "numerator": 3,
+            "denominator": 5,
+            "value": 0.6
+          },
+          "falseEscalationRate": {
+            "numerator": 0,
+            "denominator": 3,
+            "value": 0
+          },
+          "recallAtK": {
+            "numerator": 5,
+            "denominator": 5,
+            "value": 1
+          },
+          "factualSupport": {
+            "numerator": 3,
+            "denominator": 6,
+            "value": 0.5
+          },
+          "supportedClaimCoverage": {
+            "numerator": 3,
+            "denominator": 3,
+            "value": 1
+          },
+          "languageConsistency": {
+            "numerator": 8,
+            "denominator": 8,
+            "value": 1
+          },
+          "executionFailureRate": {
+            "numerator": 0,
+            "denominator": 8,
+            "value": 0
+          }
+        },
+        "latency": {
+          "measuredCases": 8,
+          "meanMs": 4.273801874999993,
+          "providerCalls": 14,
+          "providerMeanMs": 0.13499407142856715
+        },
+        "tokens": {
+          "input": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 14,
+            "completeTotal": null
+          },
+          "output": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 14,
+            "completeTotal": null
+          },
+          "total": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 14,
+            "completeTotal": null
+          }
+        },
+        "exitCode": 1
+      },
+      "candidate": {
+        "runId": "3dac3a64-026d-40b3-aa1e-7d4bd47dbe3d",
+        "fingerprint": "0d5491c286ea3c04e53d227d261e77cf12d2094ac975571b29ae2943c9c06f7d",
+        "dataset": "synthetic-bilingual-v1",
+        "split": "holdout",
+        "label": "MOCK SOFTWARE BEHAVIOR CHECK — NOT MODEL QUALITY",
+        "provider": {
+          "id": "mock",
+          "model": "deterministic-rules-v5",
+          "classificationPromptVersion": "classification-mock-v5",
+          "draftPromptVersion": "dorian-reference-mock-v3"
+        },
+        "config": {
+          "retrieval": "conflict-abstain-v1",
+          "k": 8,
+          "minRoutingAccuracy": 1,
+          "maxMissedEscalationRate": 0
+        },
+        "graderVersion": "exact-claims-language-v1",
+        "implementationHash": "1c478e8e1b77acf7e8514b007cc9d08ed3a2d41d51948f01fa5388c6825d239c",
+        "postgresVersion": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+        "counts": {
+          "expected": 8,
+          "completed": 8,
+          "executionFailed": 0
+        },
+        "metrics": {
+          "routingAccuracy": {
+            "numerator": 5,
+            "denominator": 8,
+            "value": 0.625
+          },
+          "missedEscalationRate": {
+            "numerator": 2,
+            "denominator": 5,
+            "value": 0.4
+          },
+          "falseEscalationRate": {
+            "numerator": 0,
+            "denominator": 3,
+            "value": 0
+          },
+          "recallAtK": {
+            "numerator": 5,
+            "denominator": 5,
+            "value": 1
+          },
+          "factualSupport": {
+            "numerator": 3,
+            "denominator": 5,
+            "value": 0.6
+          },
+          "supportedClaimCoverage": {
+            "numerator": 3,
+            "denominator": 3,
+            "value": 1
+          },
+          "languageConsistency": {
+            "numerator": 8,
+            "denominator": 8,
+            "value": 1
+          },
+          "executionFailureRate": {
+            "numerator": 0,
+            "denominator": 8,
+            "value": 0
+          }
+        },
+        "latency": {
+          "measuredCases": 8,
+          "meanMs": 3.8616768750000006,
+          "providerCalls": 13,
+          "providerMeanMs": 0.146788538461539
+        },
+        "tokens": {
+          "input": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 13,
+            "completeTotal": null
+          },
+          "output": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 13,
+            "completeTotal": null
+          },
+          "total": {
+            "knownSubtotal": null,
+            "measuredCalls": 0,
+            "totalCalls": 13,
+            "completeTotal": null
+          }
+        },
+        "exitCode": 1
+      },
+      "improvements": [
+        "conflict-fr"
+      ],
+      "regressions": [],
+      "cases": [
+        {
+          "id": "tax-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "tax-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "unknown-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": false,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": false,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "ambiguous-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "MANUAL_REVIEW",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "conflict-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "HUMAN_ANSWER_QUEUE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": null,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "IMPROVED",
+          "changed": true
+        },
+        {
+          "id": "injection-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "language-fr",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": true,
+              "missedEscalation": false,
+              "falseEscalation": false,
+              "recallAtK": 1,
+              "factualSupport": true,
+              "supportedClaimCoverage": 1,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        },
+        {
+          "id": "inactive-en",
+          "before": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "after": {
+            "status": "COMPLETED",
+            "route": "KNOWN_KNOWLEDGE",
+            "grade": {
+              "routing": false,
+              "missedEscalation": true,
+              "falseEscalation": false,
+              "recallAtK": null,
+              "factualSupport": false,
+              "supportedClaimCoverage": null,
+              "language": true
+            }
+          },
+          "outcome": "UNCHANGED",
+          "changed": false
+        }
+      ]
+    }
+  ]
+}

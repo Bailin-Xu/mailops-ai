@@ -59,6 +59,14 @@ export async function searchActiveKnowledge(
   },
   db: PrismaClient = getDb(),
 ): Promise<KnowledgeSearchResult[]> {
+  return db.$queryRaw<KnowledgeSearchResult[]>(buildKnowledgeSearchQuery(input));
+}
+
+/** Shared SQL for production entries and isolated, frozen evaluation snapshots. */
+export function buildKnowledgeSearchQuery(
+  input: { q: string; language?: KnowledgeSearchLanguage; category?: string; limit?: number },
+  source: Prisma.Sql = Prisma.sql`"KnowledgeEntry"`,
+): Prisma.Sql {
   const search = searchInputSchema.parse(input);
   const branches = languageBranches(search.language).map(({ configuration, predicate }) => {
     const document = Prisma.sql`
@@ -85,21 +93,21 @@ export async function searchActiveKnowledge(
         ts_rank_cd(${document}, ${query})::float8 AS "textScore",
         (${categoryBonus})::float8 AS "categoryBonus",
         (ts_rank_cd(${document}, ${query})::float8 + (${categoryBonus})::float8) AS "score"
-      FROM "KnowledgeEntry"
+      FROM ${source}
       WHERE "status" = 'ACTIVE'
         AND ${predicate}
         AND (${document}) @@ ${query}
     `;
   });
 
-  return db.$queryRaw<KnowledgeSearchResult[]>(Prisma.sql`
+  return Prisma.sql`
     WITH ranked AS (
       ${Prisma.join(branches, " UNION ALL ")}
     )
     SELECT * FROM ranked
     ORDER BY "score" DESC, "approvedAt" DESC
     LIMIT ${search.limit}
-  `);
+  `;
 }
 
 export async function getKnowledgeSearchOverview(db: PrismaClient = getDb()) {

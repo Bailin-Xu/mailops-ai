@@ -167,15 +167,22 @@ records implemented capabilities, incomplete workflows, and planned additions fo
 AI application, full-stack, and backend portfolio directions. It defines tasks,
 dependencies, and acceptance criteria for six phases: complete the shared baseline,
 state correctness, and knowledge-version work first, then select a specialization.
-Phases 0–2 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
+Phases 0–3 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
 documents stale-draft protection, safe replacement, review revision conflicts, and
 legacy-data behavior. Apply existing migrations with `npm run db:deploy` before
 using an updated checkout. The [knowledge/evidence guide](docs/12-phase-2-knowledge-evidence-and-verification.md)
 documents immutable approved versions, captured generation inputs, pending-draft
 impact detection, history queries, and legacy migration behavior. Old pending drafts
 need regeneration; classifications without valid context need a new attempt first.
-Next, select AI evaluation (Phase 3), full-stack review workflows (Phase 4), or
-backend reconstruction and scale (Phase 5).
+The [AI evaluation guide](docs/13-phase-3-ai-evaluation.md) documents frozen bilingual
+datasets, independent run manifests, safe resumption, metric denominators and paired
+mock scorecards. Run `npm run ai:eval -- --split tuning --retrieval baseline-v1`
+with the isolated `TEST_DATABASE_URL`; the default is mock even if `.env` selects
+Gemini. Live calls require explicit `--live`. Quality failures return exit 1; execution
+failures return exit 2. The synthetic/holdout commands now alias this isolated runner
+instead of importing into the Inbox. Recorded mock weaknesses remain visible.
+Next, select full-stack review workflows (Phase 4) or backend reconstruction and
+scale (Phase 5).
 Future integration designs do not represent completed functionality.
 
 The future Gmail, Discord, Artur-reference, delayed-send, concurrency, and privacy

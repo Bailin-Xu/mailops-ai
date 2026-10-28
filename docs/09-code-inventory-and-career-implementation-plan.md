@@ -2,7 +2,7 @@
 
 Assessment date: **2026-10-27**.
 
-Status: **Phases 0–2 complete (2026-10-27); Phases 3–5 not started.**
+Status: **Phases 0–3 complete (Phase 3: 2026-10-28); Phases 4–5 not started.**
 
 ## 1. Purpose and Scope
 
@@ -171,7 +171,7 @@ dependencies. Shared work, such as pagination, should be implemented once.
 | 0 | Reproducible development and demo baseline | None | Complete; evidence in Section 8 |
 | 1 | Correct state transitions and safe replacement | Phase 0 | Complete; evidence in Section 9 |
 | 2 | Versioned knowledge and immutable evidence | Phase 1 | Complete; evidence in Section 10 |
-| 3 | AI evaluation demonstration | Phase 2 | Not started |
+| 3 | AI evaluation demonstration | Phase 2 | Complete; evidence in Section 11 |
 | 4 | Full-stack revision workflow demonstration | Phase 2 | Not started |
 | 5 | Backend reconstruction and scale demonstration | Phase 2 | Not started |
 
@@ -271,18 +271,18 @@ service queries, and lifecycle tests. This is the shared core for all directions
 
 **Tasks**
 
-- [ ] P3-T1: Introduce evaluation run identities and manifests for dataset,
+- [x] P3-T1: Introduce evaluation run identities and manifests for dataset,
   knowledge revisions, provider/model, prompts, retrieval rules, and grading rules.
-- [ ] P3-T2: Separate new experiments from interrupted-run resumption. Prevent
+- [x] P3-T2: Separate new experiments from interrupted-run resumption. Prevent
   cached classifications from a different configuration from entering a new run.
-- [ ] P3-T3: Add English/French cases for known and unknown questions, ambiguity,
+- [x] P3-T3: Add English/French cases for known and unknown questions, ambiguity,
   conflicting knowledge, injection attempts, and incorrect response language.
-- [ ] P3-T4: Annotate expected routes, relevant source IDs, and supported claims;
+- [x] P3-T4: Annotate expected routes, relevant source IDs, and supported claims;
   report retrieval Recall@K, routing, missed human escalation, factual support,
   language consistency, latency, and token usage. Explain each metric's denominator.
-- [ ] P3-T5: Compare the current deterministic retrieval baseline with a bounded
+- [x] P3-T5: Compare the current deterministic retrieval baseline with a bounded
   prompt or retrieval-rule change. Keep a frozen holdout separate from tuning cases.
-- [ ] P3-T6: Produce case-level comparison reports and meaningful failing exit
+- [x] P3-T6: Produce case-level comparison reports and meaningful failing exit
   codes. Keep live-model runs opt-in and separate from mock CI correctness checks.
 
 **Acceptance criteria**
@@ -395,8 +395,8 @@ Use the following evidence fields when closing a phase:
 | Limitations | Known risks, unverified behavior, and scope exclusions |
 | Next step | Eligible phase or explicitly scoped follow-up |
 
-**Next planned implementation step: choose Phase 3, 4, or 5 specialization.**
-The shared Phase 0–2 foundation is complete; Phases 3–5 remain unstarted.
+**Next planned implementation step: choose Phase 4 or Phase 5 specialization.**
+The shared Phase 0–2 foundation and Phase 3 evaluation are complete; Phases 4–5 remain unstarted.
 
 ## 8. Phase 0 Closure — 2026-10-27
 
@@ -490,3 +490,36 @@ legacy handling, rollback/recovery boundaries, and acceptance mappings are in th
   and review-required messages. Browser E2E remains unverified until Phase 4 adds
   Playwright. No remote CI run, live model call, dependency addition, or Git commit/
   push occurred. The pre-existing `07`/`08` roadmap files remain untouched.
+
+
+## 11. Phase 3 Closure — 2026-10-28
+
+All P3-T1–T6 tasks and P3-A1–A5 tooling criteria are complete. See the
+[AI evaluation guide](13-phase-3-ai-evaluation.md) and the
+[recorded synthetic scorecards](evaluation/phase-3-mock-scorecards.json).
+
+- Each fresh run has its own identity; manifests freeze dataset/knowledge revisions,
+  provider/model/prompts, SQL/runtime identity, retrieval/grader rules and gates.
+  Explicit resume skips saved cases and rejects changed configurations/runtime.
+- 8 tuning and 8 separate frozen holdout cases cover English/French normal,
+  ambiguous, unknown, conflicting, injection and language-override behavior.
+- Current PostgreSQL retrieval is shared with the snapshot runner. The bounded
+  candidate abstains on retrieved same-question/different-answer conflicts;
+  production routing is unchanged. No live AI or application data is used.
+- Four recorded mock runs and two comparisons completed with expected quality
+  exit 1: conflict abstention fixes one case per split, with no observed regression.
+  Injection and false-positive answerability gaps remain reported. This proves
+  the evaluator detects failures; it does not establish real model quality.
+- Reports provide explicit denominators, case-level decisions, errors, latency,
+  nullable token coverage and improvement/regression lists. Invalid execution exits
+  2; completed poor quality exits 1. Tests verify both independently.
+- Legacy synthetic/holdout commands now alias isolated benchmark runs instead of
+  importing email/caching classifications in the application database. Local run
+  artifacts are ignored; only synthetic example scorecards are intentionally saved.
+- `npm run check` passed: lint, types, **123 offline tests in 29 files**, and
+  production build. All **76 integration tests in 17 files** passed; the isolated
+  sentinel was unchanged. See the phase guide for coverage and limitations. No UI change, live model
+  run, model judge, monetary saving or production performance result is claimed.
+
+The next authorized task can target Phase 4 (full-stack review workflow) or Phase 5
+(backend reconstruction/scale). Neither phase was implemented here.
