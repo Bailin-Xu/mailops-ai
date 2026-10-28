@@ -318,6 +318,7 @@ model KnowledgeCandidateReviewEvent {
   note             String?
   createdAt        DateTime                 @default(now())
   candidate        KnowledgeCandidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  knowledgeRevision KnowledgeRevision?
 
   @@index([candidateId, createdAt])
   @@index([decision])
@@ -335,12 +336,44 @@ model KnowledgeEntry {
   approvedAt        DateTime
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
+  revisionSequence  Int                  @default(0)
+  currentRevisionId String?              @unique @db.Uuid
+  currentRevision   KnowledgeRevision?   @relation("CurrentKnowledgeRevision", fields: [currentRevisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisions         KnowledgeRevision[]  @relation("KnowledgeEntryRevisions")
   sourceCandidate   KnowledgeCandidate   @relation(fields: [sourceCandidateId], references: [id], onDelete: Restrict)
   draftSources      DraftKnowledgeSource[]
 
   @@index([status])
   @@index([category])
   @@index([language])
+}
+
+enum KnowledgeRevisionOrigin {
+  HUMAN_APPROVAL
+  LEGACY_BASELINE
+  SYNTHETIC_FIXTURE
+}
+
+model KnowledgeRevision {
+  id                String                  @id @default(uuid()) @db.Uuid
+  knowledgeEntryId  String                  @db.Uuid
+  version           Int
+  title             String
+  canonicalQuestion String
+  answer            String
+  category          String
+  language          String
+  approvedAt        DateTime
+  recordedAt        DateTime                @default(now())
+  origin            KnowledgeRevisionOrigin
+  reviewEventId     String?                 @unique @db.Uuid
+  knowledgeEntry    KnowledgeEntry          @relation("KnowledgeEntryRevisions", fields: [knowledgeEntryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  currentForEntry   KnowledgeEntry?         @relation("CurrentKnowledgeRevision")
+  reviewEvent       KnowledgeCandidateReviewEvent? @relation(fields: [reviewEventId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  draftSources      DraftKnowledgeSource[]
+
+  @@unique([knowledgeEntryId, version])
+  @@unique([knowledgeEntryId, id])
 }
 
 enum DraftStatus {
@@ -353,6 +386,12 @@ enum DraftMode {
   MOCK_GROUNDED
   AI_GROUNDED
   MANUAL
+}
+
+enum DraftEvidenceStatus {
+  LEGACY_UNVERIFIED
+  CAPTURED
+  HUMAN_AUTHORED
 }
 
 model Draft {
@@ -372,6 +411,10 @@ model Draft {
   approvedAt       DateTime?
   simulatedSentAt  DateTime?
   classificationRevision Int?
+  evidenceStatus   DraftEvidenceStatus @default(LEGACY_UNVERIFIED)
+  inputSnapshot    Json?
+  knowledgeReviewRequiredAt DateTime?
+  knowledgeReviewReason String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   thread           EmailThread   @relation(fields: [threadId], references: [id], onDelete: Restrict)
@@ -383,6 +426,7 @@ model Draft {
   @@index([threadId, createdAt])
   @@index([classificationId, createdAt])
   @@index([status])
+  @@index([status, knowledgeReviewRequiredAt])
 }
 
 enum ReplyDispatchState {
@@ -504,11 +548,14 @@ model DraftKnowledgeSource {
   rank             Int
   relevanceScore   Float
   knowledgeFingerprint String?
+  knowledgeRevisionId String? @db.Uuid
   draft            Draft          @relation(fields: [draftId], references: [id], onDelete: Cascade)
   knowledgeEntry   KnowledgeEntry @relation(fields: [knowledgeEntryId], references: [id], onDelete: Restrict)
+  knowledgeRevision KnowledgeRevision? @relation(fields: [knowledgeEntryId, knowledgeRevisionId], references: [knowledgeEntryId, id], onDelete: Restrict, onUpdate: NoAction)
 
   @@id([draftId, knowledgeEntryId])
   @@index([knowledgeEntryId])
+  @@index([knowledgeRevisionId])
 }
 
 model WebsiteKnowledgeReviewItem {

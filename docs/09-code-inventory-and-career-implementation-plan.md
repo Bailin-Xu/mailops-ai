@@ -2,7 +2,7 @@
 
 Assessment date: **2026-10-27**.
 
-Status: **Phases 0 and 1 complete (2026-10-27); Phases 2–5 not started.**
+Status: **Phases 0–2 complete (2026-10-27); Phases 3–5 not started.**
 
 ## 1. Purpose and Scope
 
@@ -57,6 +57,9 @@ These are historical assessment results, not acceptance evidence for future code
 changes. Each implementation phase must run its own required checks.
 
 ## 3. Current Capability Inventory
+
+This section and the improvement list record the initial assessment baseline.
+Use the phase closure entries for implemented changes since that assessment.
 
 ### 3.1 Implemented capabilities
 
@@ -167,7 +170,7 @@ dependencies. Shared work, such as pagination, should be implemented once.
 | --- | --- | --- | --- |
 | 0 | Reproducible development and demo baseline | None | Complete; evidence in Section 8 |
 | 1 | Correct state transitions and safe replacement | Phase 0 | Complete; evidence in Section 9 |
-| 2 | Versioned knowledge and immutable evidence | Phase 1 | Not started |
+| 2 | Versioned knowledge and immutable evidence | Phase 1 | Complete; evidence in Section 10 |
 | 3 | AI evaluation demonstration | Phase 2 | Not started |
 | 4 | Full-stack revision workflow demonstration | Phase 2 | Not started |
 | 5 | Backend reconstruction and scale demonstration | Phase 2 | Not started |
@@ -237,15 +240,15 @@ and reproducing regression tests. Do not expand production dispatch infrastructu
 
 **Tasks**
 
-- [ ] P2-T1: Design immutable approved knowledge revisions and a current-version
+- [x] P2-T1: Design immutable approved knowledge revisions and a current-version
   pointer/status, with explicit Prisma migrations.
-- [ ] P2-T2: Capture the actual revision and input context used for draft generation;
+- [x] P2-T2: Capture the actual revision and input context used for draft generation;
   revalidate it if knowledge changes while the model request is in flight.
-- [ ] P2-T3: Identify affected pending drafts when a source is revised or retired;
+- [x] P2-T3: Identify affected pending drafts when a source is revised or retired;
   require explicit re-review or regeneration according to documented rules.
-- [ ] P2-T4: Preserve confirmed history; migrate existing data without claiming
+- [x] P2-T4: Preserve confirmed history; migrate existing data without claiming
   that today's knowledge content was necessarily the historical generation source.
-- [ ] P2-T5: Expose revision/history/impact service queries for later UI and
+- [x] P2-T5: Expose revision/history/impact service queries for later UI and
   evaluation work. Keep style configuration separate from factual grounding.
 
 **Acceptance criteria**
@@ -392,7 +395,8 @@ Use the following evidence fields when closing a phase:
 | Limitations | Known risks, unverified behavior, and scope exclusions |
 | Next step | Eligible phase or explicitly scoped follow-up |
 
-**Next planned implementation step: Phase 2.** Phases 2–5 remain unstarted.
+**Next planned implementation step: choose Phase 3, 4, or 5 specialization.**
+The shared Phase 0–2 foundation is complete; Phases 3–5 remain unstarted.
 
 ## 8. Phase 0 Closure — 2026-10-27
 
@@ -457,3 +461,32 @@ historical-data handling, and criterion-to-test mappings are recorded in the
   knowledge revisions and richer conflict UI remain Phases 2 and 4 respectively.
 - No Git commit/push or live model call was made for this phase. The pre-existing
   `07`/`08` roadmap files remain untouched.
+
+## 10. Phase 2 Closure — 2026-10-27
+
+Tasks P2-T1 through P2-T5 are complete. Detailed lifecycle rules, service interfaces,
+legacy handling, rollback/recovery boundaries, and acceptance mappings are in the
+[Phase 2 verification guide](12-phase-2-knowledge-evidence-and-verification.md).
+
+- Approved knowledge now has immutable revisions and a current projection/pointer.
+  Human approvals link their review events; fixture and legacy baselines have
+  explicit origins. Rejection/retirement preserves previous factual versions.
+- New grounded drafts capture validated model inputs with style separate from
+  factual revision references. Database guards protect revision content, snapshots,
+  and source bindings. In-flight knowledge changes discard the result safely.
+- Changed/retired knowledge flags affected pending drafts; confirmation requires
+  a fresh eligible draft. Confirmed history is untouched. History/evidence queries
+  and bounded impact pagination are available to later UI/evaluation work.
+- Migration `20261027190000_add_knowledge_revisions_and_evidence` was tested against
+  synthetic pre-existing data, including transaction rollback/reapplication, and
+  applied to the guarded local development database. It does not invent historical
+  draft evidence. Recovery after published evidence requires a forward repair or
+  separately validated backup restoration; no destructive down migration was run.
+- `npm run check` passed: lint, types, **114 offline tests**, and production build.
+  All **73 integration tests in 16 files** passed, including the new versioning
+  and legacy migration suites; the isolation sentinel remained unchanged. Prisma
+  generation/validation and test-database schema diff passed.
+- Inbox source rendering uses actual immutable text/version, with explicit legacy
+  and review-required messages. Browser E2E remains unverified until Phase 4 adds
+  Playwright. No remote CI run, live model call, dependency addition, or Git commit/
+  push occurred. The pre-existing `07`/`08` roadmap files remain untouched.

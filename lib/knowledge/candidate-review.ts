@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
 import { revisionSchema, workflowTransaction } from "@/lib/workflow/transaction";
+import { deactivateCandidateKnowledge, publishApprovedKnowledge } from "./revisions";
 
 export const candidateDecisionValues = ["APPROVED", "REJECTED"] as const;
 export const candidateStatusValues = [
@@ -86,7 +87,7 @@ export async function saveCandidateReview(
       },
     });
 
-    await transaction.knowledgeCandidateReviewEvent.create({
+    const event = await transaction.knowledgeCandidateReviewEvent.create({
       data: {
         candidateId: review.candidateId,
         decision: review.decision,
@@ -101,33 +102,11 @@ export async function saveCandidateReview(
     });
 
     if (review.decision === "APPROVED") {
-      await transaction.knowledgeEntry.upsert({
-        where: { sourceCandidateId: review.candidateId },
-        create: {
-          sourceCandidateId: review.candidateId,
-          title: review.title,
-          canonicalQuestion: review.canonicalQuestion,
-          answer: review.answer,
-          category: review.category,
-          language: review.language,
-          status: "ACTIVE",
-          approvedAt: reviewedAt,
-        },
-        update: {
-          title: review.title,
-          canonicalQuestion: review.canonicalQuestion,
-          answer: review.answer,
-          category: review.category,
-          language: review.language,
-          status: "ACTIVE",
-          approvedAt: reviewedAt,
-        },
-      });
+      await publishApprovedKnowledge({ candidateId: review.candidateId, reviewEventId: event.id,
+        title: review.title, canonicalQuestion: review.canonicalQuestion, answer: review.answer,
+        category: review.category, language: review.language, approvedAt: reviewedAt }, transaction);
     } else {
-      await transaction.knowledgeEntry.updateMany({
-        where: { sourceCandidateId: review.candidateId },
-        data: { status: "INACTIVE" },
-      });
+      await deactivateCandidateKnowledge(review.candidateId, transaction);
     }
 
     return updated;
@@ -196,7 +175,7 @@ export async function approvePendingCandidatesInView(
           reviewedAt,
         },
       });
-      await transaction.knowledgeCandidateReviewEvent.create({
+      const event = await transaction.knowledgeCandidateReviewEvent.create({
         data: {
           candidateId: candidate.id,
           decision: "APPROVED",
@@ -209,28 +188,9 @@ export async function approvePendingCandidatesInView(
           createdAt: reviewedAt,
         },
       });
-      await transaction.knowledgeEntry.upsert({
-        where: { sourceCandidateId: candidate.id },
-        create: {
-          sourceCandidateId: candidate.id,
-          title: candidate.title,
-          canonicalQuestion: candidate.canonicalQuestion,
-          answer: candidate.proposedAnswer,
-          category: candidate.category,
-          language,
-          status: "ACTIVE",
-          approvedAt: reviewedAt,
-        },
-        update: {
-          title: candidate.title,
-          canonicalQuestion: candidate.canonicalQuestion,
-          answer: candidate.proposedAnswer,
-          category: candidate.category,
-          language,
-          status: "ACTIVE",
-          approvedAt: reviewedAt,
-        },
-      });
+      await publishApprovedKnowledge({ candidateId: candidate.id, reviewEventId: event.id,
+        title: candidate.title, canonicalQuestion: candidate.canonicalQuestion, answer: candidate.proposedAnswer,
+        category: candidate.category, language, approvedAt: reviewedAt }, transaction);
     }
 
     return { approved: candidates.length };

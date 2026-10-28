@@ -51,9 +51,16 @@ type ClassificationView = {
     approvedBody: string | null;
     approvedLanguage: string | null;
     simulatedSentAt: Date | null;
+    evidenceStatus: "LEGACY_UNVERIFIED" | "CAPTURED" | "HUMAN_AUTHORED";
+    knowledgeReviewRequiredAt: Date | null;
+    knowledgeReviewReason: string | null;
     knowledgeSources: Array<{
       rank: number;
       relevanceScore: number;
+      knowledgeRevision: {
+        id: string; version: number; title: string; canonicalQuestion: string;
+        answer: string; language: string; category: string;
+      } | null;
       knowledgeEntry: {
         id: string;
         title: string;
@@ -179,15 +186,19 @@ export function ClassificationPanel({
               <div className="inbox-grounding-evidence">
                 <p><b>Retrieval query</b>{classification.knowledgeQuery}</p>
                 <p><b>Grounding sources</b>{classification.knowledgeMatchCount}</p>
-                {draft.knowledgeSources.map(({ knowledgeEntry, relevanceScore, rank }) => (
+                {draft.knowledgeSources.map(({ knowledgeEntry, knowledgeRevision, relevanceScore, rank }) => (
                   <article key={knowledgeEntry.id}>
-                    <span>#{rank} · {knowledgeEntry.language.toUpperCase()} · {knowledgeEntry.category.replaceAll("_", " ")} · score {relevanceScore.toFixed(2)}</span>
-                    <strong>{knowledgeEntry.title}</strong>
-                    <p>{knowledgeEntry.canonicalQuestion}</p>
+                    {knowledgeRevision ? <>
+                      <span>#{rank} · Version {knowledgeRevision.version} · {knowledgeRevision.language.toUpperCase()} · score {relevanceScore.toFixed(2)}</span>
+                      <strong>{knowledgeRevision.title}</strong>
+                      <p>{knowledgeRevision.canonicalQuestion}</p>
+                      <p>{knowledgeRevision.answer}</p>
+                    </> : <><strong>Legacy source link</strong><p>The historical source text was not captured. Current knowledge is not evidence of what this reply originally used.</p></>}
                   </article>
                 ))}
               </div>
-              {draft.status === "GENERATED" && classification.processingStatus === "DRAFT_READY" ? (
+              {draft.status === "GENERATED" && draft.knowledgeReviewRequiredAt ? <p role="status">Knowledge changed or historical evidence is missing. Regenerate this reply using current approved knowledge before confirmation.</p> : null}
+              {draft.status === "GENERATED" && classification.processingStatus === "DRAFT_READY" && draft.evidenceStatus === "CAPTURED" && !draft.knowledgeReviewRequiredAt ? (
                 <>
                   <details className="inbox-original-draft">
                     <summary>View original AI draft</summary>

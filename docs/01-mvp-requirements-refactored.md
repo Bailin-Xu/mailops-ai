@@ -537,6 +537,22 @@ The user shall be able to:
 
 Hard deletion is not required for the MVP.
 
+### KBR-014 — Preserve approved knowledge versions
+
+Each knowledge-candidate approval shall create an immutable factual revision and update the entry's
+current pointer. Rejection/retirement shall preserve previous revisions. The
+current entry status controls retrieval eligibility. Legacy baselines shall be
+identified explicitly rather than asserted as historical generation evidence.
+
+### KBR-015 — Capture draft evidence and detect knowledge impact
+
+Grounded drafts shall bind exact supplied knowledge revisions and validated input
+snapshots, keeping style separate from factual grounding. Revision/retirement shall
+flag affected pending drafts and require regeneration before confirmation. The
+confirmation service shall enforce validity independently of the UI. Confirmed
+historical replies and evidence shall remain unchanged. See the
+[Phase 2 contract](12-phase-2-knowledge-evidence-and-verification.md).
+
 ## 6.3 Knowledge Search
 
 ### KBR-020 — Search approved knowledge

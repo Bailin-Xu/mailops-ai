@@ -93,7 +93,7 @@ export async function getMockInboxQueue(
             include: {
               knowledgeSources: {
                 orderBy: { rank: "asc" },
-                include: { knowledgeEntry: true },
+                include: { knowledgeEntry: true, knowledgeRevision: true },
               },
             },
           },

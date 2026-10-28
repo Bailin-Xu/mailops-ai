@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import type { PrismaClient } from "../../generated/prisma/client";
 import { ingestEml } from "../../lib/email/ingestion";
+import { ensureCurrentKnowledgeRevision } from "../../lib/knowledge/revisions";
+import { workflowTransaction } from "../../lib/workflow/transaction";
 
 export const demoCandidatePrefix = "neutral-demo:v1:";
 export const demoMessageIds = ["shipping-en", "shipping-fr", "technical-en", "manual-fr"]
@@ -36,38 +38,42 @@ export async function seedNeutralDemo(db: PrismaClient) {
       category: "SHIPPING",
       language: entry.language,
     };
-    await db.knowledgeCandidate.upsert({
-      where: { fingerprint: `${demoCandidatePrefix}${entry.key}` },
-      update: {}, // Never overwrite subsequent reviewer edits, rejection, or retirement.
-      create: {
-        fingerprint: `${demoCandidatePrefix}${entry.key}`,
-        title: fields.title,
-        canonicalQuestion: fields.canonicalQuestion,
-        proposedAnswer: fields.answer,
-        category: fields.category,
-        language: fields.language,
-        status: "APPROVED",
-        reviewedTitle: fields.title,
-        reviewedQuestion: fields.canonicalQuestion,
-        reviewedAnswer: fields.answer,
-        reviewedCategory: fields.category,
-        reviewedLanguage: fields.language,
-        reviewNote: "Pre-approved synthetic demo fixture; not operational company knowledge.",
-        reviewedAt: approvedAt,
-        reviewEvents: {
-          create: {
-            decision: "APPROVED",
-            reviewedTitle: fields.title,
-            reviewedQuestion: fields.canonicalQuestion,
-            reviewedAnswer: fields.answer,
-            reviewedCategory: fields.category,
-            reviewedLanguage: fields.language,
-            note: "Pre-approved synthetic demo fixture; no AI approval occurred.",
-            createdAt: approvedAt,
+    await workflowTransaction(db, async (transaction) => {
+      const candidate = await transaction.knowledgeCandidate.upsert({
+        where: { fingerprint: `${demoCandidatePrefix}${entry.key}` },
+        include: { knowledgeEntry: true },
+        update: {}, // Never overwrite subsequent reviewer edits, rejection, or retirement.
+        create: {
+          fingerprint: `${demoCandidatePrefix}${entry.key}`,
+          title: fields.title,
+          canonicalQuestion: fields.canonicalQuestion,
+          proposedAnswer: fields.answer,
+          category: fields.category,
+          language: fields.language,
+          status: "APPROVED",
+          reviewedTitle: fields.title,
+          reviewedQuestion: fields.canonicalQuestion,
+          reviewedAnswer: fields.answer,
+          reviewedCategory: fields.category,
+          reviewedLanguage: fields.language,
+          reviewNote: "Pre-approved synthetic demo fixture; not operational company knowledge.",
+          reviewedAt: approvedAt,
+          reviewEvents: {
+            create: {
+              decision: "APPROVED",
+              reviewedTitle: fields.title,
+              reviewedQuestion: fields.canonicalQuestion,
+              reviewedAnswer: fields.answer,
+              reviewedCategory: fields.category,
+              reviewedLanguage: fields.language,
+              note: "Pre-approved synthetic demo fixture; no AI approval occurred.",
+              createdAt: approvedAt,
+            },
           },
+          knowledgeEntry: { create: { ...fields, status: "ACTIVE", approvedAt } },
         },
-        knowledgeEntry: { create: { ...fields, status: "ACTIVE", approvedAt } },
-      },
+      });
+      if (candidate.knowledgeEntry) await ensureCurrentKnowledgeRevision(candidate.knowledgeEntry, transaction, "SYNTHETIC_FIXTURE");
     });
   }
 

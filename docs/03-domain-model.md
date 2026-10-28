@@ -367,6 +367,8 @@ Represents trusted, human-approved knowledge.
 
 - `id`
 - `sourceCandidateId`
+- `revisionSequence`
+- `currentRevisionId`
 - `title`
 - `canonicalQuestion`
 - `answer`
@@ -397,6 +399,26 @@ Represents trusted, human-approved knowledge.
 - may be used by many `Draft`
 - may have many `AuditEvent`
 
+### Phase 2 version relationships
+
+KnowledgeEntry remains the current full-text-search projection. Its lifecycle
+status determines whether new drafts may use it, and its current pointer identifies
+the exact approved revision. Each new approval appends a version rather than
+rewriting previous factual records.
+
+## 3.8.1 KnowledgeRevision
+
+Immutable approved factual content with `knowledgeEntryId`, `version`, `title`,
+`canonicalQuestion`, `answer`, `category`, `language`, `approvedAt`, `recordedAt`,
+`origin`, and an optional `reviewEventId`. The origin distinguishes HUMAN_APPROVAL,
+LEGACY_BASELINE, and SYNTHETIC_FIXTURE. Version numbers are unique per entry.
+
+Draft sources reference exact revisions. A migration baseline records today's
+stored content without asserting that historical drafts used it. Database guards
+prevent revision mutation and cross-entry current pointers. Lifecycle/history and
+recovery details are in the
+[Phase 2 guide](12-phase-2-knowledge-evidence-and-verification.md).
+
 ---
 
 ## 3.9 Draft
@@ -417,6 +439,11 @@ Represents one generated or manually edited reply draft.
 - `approvedLanguage`
 - `approvedAt`
 - `simulatedSentAt`
+- `classificationRevision`
+- `evidenceStatus` (`LEGACY_UNVERIFIED`, `CAPTURED`, `HUMAN_AUTHORED`)
+- `inputSnapshot` (immutable validated generation or human-answer input)
+- `knowledgeReviewRequiredAt`
+- `knowledgeReviewReason`
 - `createdAt`
 - `updatedAt`
 
@@ -431,6 +458,8 @@ Represents one generated or manually edited reply draft.
 - stores a grounded Mock-provider reference reply or a human-authored reply;
 - preserves the exact approved version;
 - records simulated-send completion.
+- preserves immutable input evidence separately from final human text;
+- marks affected pending replies for regeneration without rewriting confirmed history.
 
 ### Relationships
 
@@ -449,6 +478,8 @@ Join entity connecting drafts to the knowledge used.
 
 - `draftId`
 - `knowledgeEntryId`
+- `knowledgeRevisionId` (nullable only for unverified legacy links)
+- `knowledgeFingerprint`
 - `rank`
 - `relevanceScore`
 
@@ -457,6 +488,8 @@ Join entity connecting drafts to the knowledge used.
 - preserves grounding traceability;
 - supports source display in the UI;
 - allows one draft to use multiple knowledge records.
+- binds new generated drafts to immutable factual versions and rejects rebinding;
+- leaves historical missing evidence explicit instead of substituting today's content.
 
 ---
 

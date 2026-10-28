@@ -195,6 +195,14 @@ A proposed reusable question-and-answer record. It is not trusted until reviewed
 
 Human-approved content that may be used for draft generation.
 
+Phase 2 retains KnowledgeEntry as the current searchable projection and appends
+immutable KnowledgeRevision records on approval. Drafts bind the actual supplied
+revision plus validated input snapshots; writing style is stored separately from
+factual revision references. Knowledge changes require regeneration of affected
+pending replies, while confirmed history retains its original evidence. A legacy
+baseline is current captured content, not proof of what an older draft used. See
+the [version/evidence contract](12-phase-2-knowledge-evidence-and-verification.md).
+
 ```text
 Raw Email
 → AI or Manual Extraction

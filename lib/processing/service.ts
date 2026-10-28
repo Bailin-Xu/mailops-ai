@@ -1,8 +1,10 @@
-import type { ClassificationCategory, Prisma, PrismaClient } from "@/generated/prisma/client";
+import type { ClassificationCategory, PrismaClient } from "@/generated/prisma/client";
 import { draftResultSchema, type AIExecutionMetadata, type AIProvider } from "@/lib/ai/provider";
 import { reviewClassification } from "@/lib/classification/service";
 import { getDb } from "@/lib/db";
 import { searchActiveKnowledge } from "@/lib/knowledge/search";
+import { captureApprovedKnowledge, sameKnowledgeFacts, type VersionedGrounding } from "@/lib/knowledge/revisions";
+import { captureDraftInput, draftInputSnapshotSchema } from "./evidence";
 import { assertCurrentContext, isTerminalProcessing, knowledgeFingerprint, loadClassificationContext, type ClassificationContext } from "@/lib/workflow/context";
 import { revisionSchema, WorkflowConflictError, workflowTransaction } from "@/lib/workflow/transaction";
 import { z } from "zod";
@@ -55,24 +57,24 @@ export async function runAutomaticProcessing(classificationIdInput: unknown, pro
   const matches = await searchActiveKnowledge({ q: query, language, category, limit: 8 }, db);
   const match = selectGroundingMatch(query, matches);
   if (!match) return noKnowledge();
-  const knowledge = await db.knowledgeEntry.findUniqueOrThrow({ where: { id: match.id } });
-  if (knowledge.status !== "ACTIVE") throw new WorkflowConflictError();
+  const { entry: knowledge, revision: knowledgeRevision } = await captureApprovedKnowledge(match.id, db);
   // Bind exactly the same content selected by retrieval, before sending it to AI.
   if (knowledge.answer !== match.answer || knowledge.canonicalQuestion !== match.canonicalQuestion || knowledge.title !== match.title
     || knowledge.language !== match.language || knowledge.category !== match.category) {
     throw new WorkflowConflictError();
   }
   const fingerprint = knowledgeFingerprint(knowledge);
+  const inputSnapshot = captureDraftInput(context, [knowledgeRevision.id]);
   const startedAt = performance.now();
   let executionMetadata: AIExecutionMetadata | undefined;
   try {
     let output: unknown;
     try {
       output = await provider.generateDraft({
-        subject: context.thread.subject,
-        cleanBody: context.message.cleanBody.trim() || context.message.normalizedBody.trim(),
-        language: context.aiLanguage as "en" | "fr" | "mixed" | "unknown",
-        knowledge: [{ id: knowledge.id, title: knowledge.title, answer: knowledge.answer }],
+        subject: inputSnapshot.subject,
+        cleanBody: inputSnapshot.cleanBody,
+        language: inputSnapshot.language,
+        knowledge: [{ id: knowledge.id, title: knowledgeRevision.title, answer: knowledgeRevision.answer }],
         style: "DORIAN_REFERENCE",
       });
     } catch {
@@ -88,7 +90,8 @@ export async function runAutomaticProcessing(classificationIdInput: unknown, pro
     return await workflowTransaction(db, async (transaction) => {
       await assertCurrentContext(context, transaction);
       const currentKnowledge = await transaction.knowledgeEntry.findUnique({ where: { id: knowledge.id } });
-      if (!currentKnowledge || currentKnowledge.status !== "ACTIVE" || knowledgeFingerprint(currentKnowledge) !== fingerprint) {
+      if (!currentKnowledge || currentKnowledge.status !== "ACTIVE" || knowledgeFingerprint(currentKnowledge) !== fingerprint
+        || currentKnowledge.currentRevisionId !== knowledgeRevision.id || !sameKnowledgeFacts(currentKnowledge, knowledgeRevision)) {
         throw new WorkflowConflictError();
       }
       await transaction.classification.update({
@@ -105,17 +108,20 @@ export async function runAutomaticProcessing(classificationIdInput: unknown, pro
           promptVersion: provider.draftPromptVersion, status: "SUCCEEDED", latencyMs: elapsed(startedAt),
           inputTokens: executionMetadata?.inputTokens, outputTokens: executionMetadata?.outputTokens,
           inputMetadata: { classificationId, sourceContextHash: context.sourceContextHash,
-            knowledgeSourceIds: validated.data.knowledgeSourceIds, style: "DORIAN_REFERENCE", ...providerResponseMetadata(executionMetadata) },
+            knowledgeSourceIds: validated.data.knowledgeSourceIds, knowledgeRevisionIds: [knowledgeRevision.id],
+            style: "DORIAN_REFERENCE", ...providerResponseMetadata(executionMetadata) },
           output: validated.data,
         },
       });
       const draft = await transaction.draft.create({
         data: {
           threadId: context.threadId, classificationId, classificationRevision: context.revision + 1,
+          evidenceStatus: "CAPTURED", inputSnapshot,
           aiExecutionId: execution.id, subject: validated.data.subject, body: validated.data.body,
           language: validated.data.language, style: "DORIAN_REFERENCE",
           mode: provider.id === "mock" ? "MOCK_GROUNDED" : "AI_GROUNDED",
-          knowledgeSources: { create: { knowledgeEntryId: knowledge.id, rank: 1, relevanceScore: match.score, knowledgeFingerprint: fingerprint } },
+          knowledgeSources: { create: { knowledgeEntryId: knowledge.id, knowledgeRevisionId: knowledgeRevision.id,
+            rank: 1, relevanceScore: match.score, knowledgeFingerprint: fingerprint } },
         },
       });
       await transaction.draft.updateMany({
@@ -149,11 +155,18 @@ export async function confirmAndSimulateSend(input: unknown, db: PrismaClient = 
   const now = new Date();
   return workflowTransaction(db, async (transaction) => {
     const draft = await transaction.draft.findUnique({
-      where: { id: approved.draftId }, include: { knowledgeSources: { include: { knowledgeEntry: true } } },
+      where: { id: approved.draftId }, include: { knowledgeSources: { include: { knowledgeEntry: true, knowledgeRevision: true } } },
     });
     if (!draft || draft.status !== "GENERATED") throw new Error("This reference reply is no longer ready to send.");
     const context = await loadClassificationContext(draft.classificationId, transaction);
+    const snapshot = draftInputSnapshotSchema.safeParse(draft.inputSnapshot);
     if (context.processingStatus !== "DRAFT_READY" || draft.classificationRevision !== context.revision
+      || draft.evidenceStatus !== "CAPTURED" || draft.knowledgeReviewRequiredAt !== null
+      || !snapshot.success || snapshot.data.kind !== "GROUNDED"
+      || snapshot.data.sourceContextHash !== context.sourceContextHash
+      || snapshot.data.classificationRevisionAtStart + 1 !== draft.classificationRevision
+      || snapshot.data.factualGrounding.revisionIds.length !== draft.knowledgeSources.length
+      || draft.knowledgeSources.some((source) => !snapshot.data.factualGrounding.revisionIds.includes(source.knowledgeRevisionId ?? ""))
       || !validGrounding(draft.knowledgeSources)) throw new WorkflowConflictError();
     await transaction.classification.update({
       where: { id: context.id, revision: context.revision },
@@ -199,6 +212,7 @@ export async function submitManualAnswer(input: unknown, db: PrismaClient = getD
     const draft = await transaction.draft.create({
       data: {
         threadId: context.threadId, classificationId: context.id, classificationRevision: context.revision + 1,
+        evidenceStatus: "HUMAN_AUTHORED", inputSnapshot: captureDraftInput(context, []),
         subject, body: answer.body, language: context.aiLanguage, style: "HUMAN_AUTHORED", mode: "MANUAL",
         status: "SIMULATED_SENT", approvedSubject: subject, approvedBody: answer.body,
         approvedLanguage: context.aiLanguage, approvedAt: now, simulatedSentAt: now,
@@ -307,9 +321,11 @@ async function finishRoute(
   });
 }
 
-type GroundingSource = Prisma.DraftKnowledgeSourceGetPayload<{ include: { knowledgeEntry: true } }>;
-function validGrounding(sources: GroundingSource[]) {
+function validGrounding(sources: VersionedGrounding[]) {
   return sources.length > 0 && sources.every((source) => source.knowledgeEntry.status === "ACTIVE"
+    && source.knowledgeRevision !== null && source.knowledgeRevisionId === source.knowledgeEntry.currentRevisionId
+    && source.knowledgeRevision.knowledgeEntryId === source.knowledgeEntry.id
+    && sameKnowledgeFacts(source.knowledgeEntry, source.knowledgeRevision)
     && source.knowledgeFingerprint !== null && source.knowledgeFingerprint === knowledgeFingerprint(source.knowledgeEntry));
 }
 
@@ -332,9 +348,10 @@ async function recordDraftFailure(context: ClassificationContext, provider: AIPr
       await assertCurrentContext(context, transaction);
       const previous = await transaction.draft.findFirst({
         where: { classificationId: context.id, classificationRevision: context.revision, status: "GENERATED" },
-        include: { knowledgeSources: { include: { knowledgeEntry: true } } },
+        include: { knowledgeSources: { include: { knowledgeEntry: true, knowledgeRevision: true } } },
       });
-      const preserved = previous && validGrounding(previous.knowledgeSources);
+      const preserved = previous && previous.evidenceStatus === "CAPTURED"
+        && previous.knowledgeReviewRequiredAt === null && validGrounding(previous.knowledgeSources);
       await transaction.classification.update({
         where: { id: context.id, revision: context.revision },
         data: { processingStatus: preserved ? "DRAFT_READY" : "FAILED",
