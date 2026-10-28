@@ -47,6 +47,7 @@ export async function loadClassificationContext(id: string, db: Prisma.Transacti
     include: { thread: { include: { messages: inboundContextQuery } } },
   });
   if (!classification) throw new Error("The selected classification no longer exists.");
+  if (classification.thread.mergedIntoThreadId) throw new WorkflowConflictError();
   const message = classification.thread.messages[0];
   if (!message) throw new Error("Only a thread with an inbound message can be processed.");
   if (

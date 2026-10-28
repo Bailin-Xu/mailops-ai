@@ -32,7 +32,9 @@
     "db:validate": "prisma validate",
     "postinstall": "prisma generate",
     "ai:eval": "tsx scripts/run-ai-benchmark.ts",
-    "test:e2e": "tsx scripts/run-browser-tests.ts"
+    "test:e2e": "tsx scripts/run-browser-tests.ts",
+    "eml:threads:reconstruct": "tsx scripts/reconstruct-threads.ts",
+    "bench:threads": "tsx scripts/benchmark-threads.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

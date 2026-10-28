@@ -167,7 +167,7 @@ records implemented capabilities, incomplete workflows, and planned additions fo
 AI application, full-stack, and backend portfolio directions. It defines tasks,
 dependencies, and acceptance criteria for six phases: complete the shared baseline,
 state correctness, and knowledge-version work first, then select a specialization.
-Phases 0–4 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
+Phases 0–5 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
 documents stale-draft protection, safe replacement, review revision conflicts, and
 legacy-data behavior. Apply existing migrations with `npm run db:deploy` before
 using an updated checkout. The [knowledge/evidence guide](docs/12-phase-2-knowledge-evidence-and-verification.md)
@@ -187,7 +187,15 @@ human draft saves/rejection and a reproducible browser demonstration. Apply migr
 and restart an existing development server before using the new draft review fields.
 For isolated browser checks, install Chromium with `npx playwright install chromium`,
 start the test database, then run `npm run test:e2e` with `TEST_DATABASE_URL`.
-Next is backend reconstruction and scale (Phase 5), which remains unstarted.
+The [thread reconstruction guide](docs/15-phase-5-thread-reconstruction-and-scale.md)
+and [performance report](docs/16-phase-5-performance-report.md) document validated
+plan/apply, historical origins/aliases, stale-work safeguards and measured 1k/10k/50k
+synthetic scale limits. `npm run eml:threads:reconstruct` prepares a private local plan;
+applying it requires an explicit `--apply` argument and a maintenance window.
+`npm run bench:threads` is an opt-in synthetic benchmark requiring the isolated
+`TEST_DATABASE_URL` and scratch-database permission. No reconstruction of existing
+private/development messages was performed. All six portfolio phases are complete;
+future integrations remain separately scoped.
 Future integration designs do not represent completed functionality.
 
 The future Gmail, Discord, Artur-reference, delayed-send, concurrency, and privacy

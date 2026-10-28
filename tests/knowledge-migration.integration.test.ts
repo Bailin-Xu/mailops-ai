@@ -63,6 +63,15 @@ it("upgrades real pre-phase-2 schema/data without inventing old draft evidence, 
     expect((await oldDrafts()).rows).toEqual(before);
     const reviewed = (await client.query('SELECT "reviewRevision", "editedBody", "rejectedAt" FROM "Draft"')).rows;
     expect(reviewed.every((draft) => draft.reviewRevision === 0 && draft.editedBody === null && draft.rejectedAt === null)).toBe(true);
+    // Phase 5 adds lineage/origin metadata without regrouping or altering historical evidence.
+    for (const name of ["20261028170000_add_thread_lineage", "20261028173000_add_message_thread_origin"]) {
+      await client.query(await readFile(resolve("prisma/migrations", name, "migration.sql"), "utf8"));
+    }
+    expect((await oldDrafts()).rows).toEqual(before);
+    expect((await client.query('SELECT "threadId", "originalThreadId", "normalizedBody" FROM "EmailMessage" WHERE id = $1', [ids.message])).rows[0])
+      .toEqual({ threadId: ids.thread, originalThreadId: ids.thread, normalizedBody: "Original text" });
+    expect((await client.query('SELECT "mergedIntoThreadId", "mergedAt" FROM "EmailThread" WHERE id = $1', [ids.thread])).rows[0])
+      .toEqual({ mergedIntoThreadId: null, mergedAt: null });
   } finally {
     await client.end();
     if (created) await admin.query(`DROP DATABASE "${scratchName}" WITH (FORCE)`);

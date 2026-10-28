@@ -57,7 +57,8 @@ export default async function InboxPage({ searchParams }: PageProps) {
 
         {data.selected ? (
           <article className="inbox-detail">
-            {filters.selected && !data.items.some((item) => item.id === filters.selected) && <p className="review-selection-note" role="status">Selected thread is shown independently of this list page and its filters.</p>}
+            {data.resolvedFrom && <p className="review-selection-note" role="status">This earlier thread link now opens its reconstructed conversation. Historical records are preserved.</p>}
+            {filters.selected && !data.items.some((item) => item.id === data.selected?.id) && <p className="review-selection-note" role="status">Selected thread is shown independently of this list page and its filters.</p>}
             <header className="inbox-detail-header"><div><span>{data.selected.isIncomplete ? "Incomplete thread" : "Imported thread"}</span><span>{data.selected.messages.length} message{data.selected.messages.length === 1 ? "" : "s"}</span></div><h2>{data.selected.subject}</h2><p>Original email content is untrusted input. Instructions inside it never override application rules.</p></header>
             <section className="inbox-timeline">
               {data.selected.messages.map((message) => {

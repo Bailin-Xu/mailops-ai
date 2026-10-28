@@ -1,3 +1,4 @@
+import { generateThreadCorpus, expectedCorpusGroups, shuffled } from "@/lib/benchmarks/thread-corpus";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,7 +26,7 @@ describe("buildThreadReconstructionPlan", () => {
       multiMessageThreads: 1,
       standaloneThreads: 1,
       messagesToMove: 2,
-      threadsToRemove: 2,
+      threadsToArchive: 2,
       incompleteThreads: 0,
       largestThreadSize: 3,
     });
@@ -98,3 +99,22 @@ function message(
     createdAt: baseDate,
   };
 }
+
+it("preserves existing membership rather than ambiguously splitting historical associations", () => {
+  const plan = buildThreadReconstructionPlan([message("a", "same-thread", "a@example.test", null, [], 1), message("b", "same-thread", "b@example.test", null, [], 2)]);
+  expect(plan.threads).toHaveLength(1); expect(plan.summary.messagesToMove).toBe(0);
+});
+it("uses stable header identity for undated messages and rejects duplicate identities", () => {
+  const a = { ...message("a", "t-a", "a@example.test", null, [], 1), sentAt: null, createdAt: new Date("2026-01-02") };
+  const b = { ...message("b", "t-b", "b@example.test", "a@example.test", [], 2), sentAt: null, createdAt: new Date("2026-01-01") };
+  expect(buildThreadReconstructionPlan([b, a]).threads[0].retainedThreadId).toBe("t-a");
+  expect(() => buildThreadReconstructionPlan([a, a])).toThrow("Duplicate message");
+  expect(() => buildThreadReconstructionPlan([a, { ...b, messageId: a.messageId }])).toThrow("Duplicate Internet");
+});
+
+it("reconstructs a 50k deep chain without recursion failure and validates generated corpus groups", () => {
+  expect(buildThreadReconstructionPlan(generateThreadCorpus(50_000, true)).threads[0].messageIds).toHaveLength(50_000);
+  const data = generateThreadCorpus(1000);
+  const groups = buildThreadReconstructionPlan(shuffled(data)).threads.map((g) => [...g.messageIds].sort());
+  expect(groups).toEqual(expectedCorpusGroups(1000));
+});

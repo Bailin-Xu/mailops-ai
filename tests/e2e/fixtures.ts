@@ -19,6 +19,7 @@ export function browserFixtures() {
   });
   return {
     create: (input?: Parameters<Fixture["create"]>[0]) => call("create", input) as ReturnType<Fixture["create"]>,
+    reconstruct: (input: Parameters<Fixture["reconstruct"]>[0]) => call("reconstruct", input),
     executionCount: () => call("count") as Promise<number>,
     cleanup: async () => { try { await call("cleanup"); } finally { child.kill(); } },
   };

@@ -250,6 +250,14 @@ The system shall indicate when:
 
 Subject-based fallback matching may be added, but it must be conservative.
 
+**Phase 5 implementation (2026-10-28):** explicit RFC-reference reconstruction
+preserves established membership and never uses equal subjects as a linking rule.
+Plan/apply validates a consistent snapshot and preserves thread aliases, original
+message ownership and historical record attribution. Stale pending context cannot
+be confirmed; late parents reconcile without deleting old IDs. Automatic splitting
+of an established thread remains excluded because historical attribution may be
+ambiguous. See the [reconstruction contract](15-phase-5-thread-reconstruction-and-scale.md).
+
 ## 4.6 Mock Inbox
 
 ### FR-050 — Display inbox

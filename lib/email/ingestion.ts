@@ -70,6 +70,7 @@ export async function ingestEml(
       const message = await transaction.emailMessage.create({
         data: {
           threadId: thread.id,
+          originalThreadId: thread.id,
           messageId: parsed.email.messageId,
           inReplyTo: parsed.email.inReplyTo,
           references: parsed.email.references,

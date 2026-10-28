@@ -2,7 +2,7 @@
 
 Assessment date: **2026-10-27**.
 
-Status: **Phases 0–4 complete (Phase 4: 2026-10-28); Phase 5 not started.**
+Status: **Phases 0–5 complete (Phase 5: 2026-10-28).**
 
 ## 1. Purpose and Scope
 
@@ -173,7 +173,7 @@ dependencies. Shared work, such as pagination, should be implemented once.
 | 2 | Versioned knowledge and immutable evidence | Phase 1 | Complete; evidence in Section 10 |
 | 3 | AI evaluation demonstration | Phase 2 | Complete; evidence in Section 11 |
 | 4 | Full-stack revision workflow demonstration | Phase 2 | Complete; evidence in Section 12 |
-| 5 | Backend reconstruction and scale demonstration | Phase 2 | Not started |
+| 5 | Backend reconstruction and scale demonstration | Phase 2 | Complete; evidence in Section 13 |
 
 ### Phase 0 — Reproducible Baseline
 
@@ -336,17 +336,17 @@ and a short reproducible product demonstration.
 
 **Tasks**
 
-- [ ] P5-T1: Define how reconstruction preserves thread identity and associated
+- [x] P5-T1: Define how reconstruction preserves thread identity and associated
   classifications, drafts, knowledge sources, dispatch records, and tickets.
-- [ ] P5-T2: Add a validated apply step to the existing planner, with consistency
+- [x] P5-T2: Add a validated apply step to the existing planner, with consistency
   checks when messages change between planning and application.
-- [ ] P5-T3: Handle out-of-order imports, missing parents later arriving, cycles,
+- [x] P5-T3: Handle out-of-order imports, missing parents later arriving, cycles,
   and repeated execution; preserve lineage instead of silently losing old records.
-- [ ] P5-T4: Generate neutral synthetic datasets at documented scales, initially
+- [x] P5-T4: Generate neutral synthetic datasets at documented scales, initially
   1k/10k/50k messages where local resources permit, with expected thread membership.
-- [ ] P5-T5: Measure reconstruction time/memory and inbox/retrieval query behavior.
+- [x] P5-T5: Measure reconstruction time/memory and inbox/retrieval query behavior.
   Reuse Phase 4 pagination if implemented; otherwise add the same bounded query layer.
-- [ ] P5-T6: Optimize only demonstrated bottlenecks; document whether full rebuild
+- [x] P5-T6: Optimize only demonstrated bottlenecks; document whether full rebuild
   is sufficient or an incremental strategy is justified.
 
 **Acceptance criteria**
@@ -395,8 +395,8 @@ Use the following evidence fields when closing a phase:
 | Limitations | Known risks, unverified behavior, and scope exclusions |
 | Next step | Eligible phase or explicitly scoped follow-up |
 
-**Next planned implementation step: Phase 5 backend reconstruction/scale.**
-Phases 0–4 are complete; Phase 5 remains unstarted and requires a separate implementation task.
+**Phases 0–5 are complete.**
+Any next implementation task requires a new scoped objective; future enterprise roadmaps are not automatically authorized.
 
 ## 8. Phase 0 Closure — 2026-10-27
 
@@ -554,3 +554,44 @@ All P4-T1–T5 tasks and P4-A1–A5 criteria are complete. See the
 Count queries/offset pagination and the complete selected-thread timeline are not
 large-corpus performance optimizations. Phase 5 remains the next optional backend
 specialization; no reconstruction or scale benchmark was implemented in Phase 4.
+
+
+## 13. Phase 5 Closure — 2026-10-28
+
+All P5-T1–T6 tasks and P5-A1–A5 criteria are complete. See the
+[reconstruction contract](15-phase-5-thread-reconstruction-and-scale.md),
+[measured performance report](16-phase-5-performance-report.md), and
+[synthetic benchmark evidence](benchmarks/phase-5-summary.json).
+
+- RFC relationships plus preserved existing membership produce connected groups,
+  with deterministic undated tie-breaking, missing-parent reconciliation and cycle
+  handling. Equal subjects never create links. Automatic ambiguous splitting is excluded.
+- Validated plan/apply separates preview from mutation. Snapshot checks, graph write
+  locks and a serializable transaction reject stale/tampered plans and roll back
+  real mid-application failures. Receipt replay is idempotent; later graph changes
+  make old receipts stale. Bulk updates avoid per-message round trips.
+- Canonical membership preserves old UUID aliases, original per-message ownership,
+  classification/draft/source/dispatch/ticket attribution and immutable evidence.
+  Changed inbound context invalidates pending work; scheduled/retryable dispatches
+  are cancelled, sent records stay unchanged, and sending leases block application.
+- Bounded inspection and old Inbox bookmarks expose current/original identity.
+  Current Inbox classifications are revision-aware and member subjects remain searchable.
+- Final 1k/10k/50k neutral datasets were each measured three times in independently
+  created scratch databases, with expected groups and replay verified. At 50k,
+  median preparation is **1.16 s**, atomic apply **6.66 s**, worker peak RSS **739 MiB**.
+  Hardware, raw samples, cache conditions and retrieval explain evidence are recorded.
+- The demonstrated recursive-stack limit at 10k/50k was fixed through iterative
+  path compression/union by size. Normal-case validation overhead and query
+  regressions remain reported. No universal latency/memory/throughput improvement
+  is claimed; full rebuild remains an explicit local maintenance operation.
+- `npm run check` passed: lint, types, **128 offline tests / 30 files**, production
+  build. Complete isolated regression: **93 integration tests / 20 files**, with
+  unchanged sentinel; older-schema lineage upgrade was also verified separately.
+  **7 browser workflows** cover the existing review flow plus alias navigation.
+- Two additive metadata migrations were validated. No reconstruction was applied
+  to private/development emails; real mailbox/model services and enterprise
+  integrations remain outside this completed plan.
+
+The six planned phases are complete. Incremental workers, very large/dense history,
+production write-availability targets and future integration roadmaps need a separate
+scope decision supported by new measurements.

@@ -40,11 +40,13 @@ export async function runThreadClassification(
       id: true,
       subject: true,
       workflowRevision: true,
+      mergedIntoThreadId: true,
       messages: inboundContextQuery,
       classifications: { orderBy: [{ threadRevision: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }, { id: "desc" }], take: 1 },
     },
   });
   if (!thread) throw new Error("The selected thread no longer exists.");
+  if (thread.mergedIntoThreadId) throw new WorkflowConflictError();
   const message = thread.messages[0];
   if (!message) throw new Error("Only a thread with an inbound message can be classified.");
   const contextHash = sourceContextHash(thread);

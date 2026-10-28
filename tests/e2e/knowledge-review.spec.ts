@@ -167,3 +167,19 @@ test("deactivate knowledge, inspect affected reply and explicitly reject outdate
   await page.getByRole("button", { name: "Resume automatic processing", exact: true }).click();
   await expect(page.getByText("No grounded draft generated", { exact: true })).toBeVisible();
 });
+
+
+test("old thread bookmarks resolve to the reconstructed conversation without losing messages or running AI", async ({ page }) => {
+  const parent = await fixtures.create(), child = await fixtures.create();
+  await page.goto(`/inbox?selected=${child.threadId}`);
+  const executions = await fixtures.executionCount();
+  await fixtures.reconstruct({ parentThreadId: parent.threadId, childThreadId: child.threadId });
+  await page.reload();
+  await expect(page.getByRole("status").filter({ hasText: "earlier thread link" })).toBeVisible();
+  await expect(page.locator(".inbox-detail-header h2")).toHaveText(parent.title);
+  await expect(page.locator(".inbox-timeline > article")).toHaveCount(2);
+  expect(await fixtures.executionCount()).toBe(executions);
+  await page.goto(`/inbox?q=${encodeURIComponent(child.title)}`);
+  await expect(page.locator(".inbox-queue > div > a")).toHaveCount(1);
+  await expect(page.locator(".inbox-detail-header h2")).toHaveText(parent.title);
+});

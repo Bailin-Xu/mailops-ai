@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
 import { z } from "zod";
+import { resolveCanonicalThreadId } from "@/lib/email/reconstruction/lineage";
 import { parsePage, pagination } from "@/lib/ui/pagination";
 
 export const inboxStatusValues = ["ALL", "UNPROCESSED", "NEEDS_ACTION", "COMPLETED"] as const;
@@ -55,11 +56,11 @@ export async function getMockInboxQueue(
         ELSE 'NEEDS_ACTION' END AS "workflowStatus"
     FROM "EmailThread" t
     LEFT JOIN LATERAL (SELECT "id", "processingStatus" FROM "Classification"
-      WHERE "threadId" = t."id" ORDER BY "threadRevision" DESC NULLS LAST, "createdAt" DESC, "id" DESC LIMIT 1) c ON true
-    WHERE EXISTS (SELECT 1 FROM "EmailMessage" m WHERE m."threadId" = t."id" AND m."direction" = 'INBOUND')
+      WHERE "threadId" = t."id" AND ("threadRevision" = t."workflowRevision" OR ("threadRevision" IS NULL AND t."workflowRevision" = 0)) ORDER BY "threadRevision" DESC NULLS LAST, "createdAt" DESC, "id" DESC LIMIT 1) c ON true
+    WHERE t."mergedIntoThreadId" IS NULL AND EXISTS (SELECT 1 FROM "EmailMessage" m WHERE m."threadId" = t."id" AND m."direction" = 'INBOUND')
       AND (${filters.q} = '' OR t."subject" ILIKE ${pattern} OR EXISTS (
         SELECT 1 FROM "EmailMessage" m WHERE m."threadId" = t."id" AND m."direction" = 'INBOUND'
-        AND (m."cleanBody" ILIKE ${pattern} OR m."normalizedBody" ILIKE ${pattern} OR EXISTS (
+        AND (m."subject" ILIKE ${pattern} OR m."cleanBody" ILIKE ${pattern} OR m."normalizedBody" ILIKE ${pattern} OR EXISTS (
           SELECT 1 FROM "EmailParticipant" p WHERE p."messageId" = m."id"
           AND (p."displayName" ILIKE ${pattern} OR p."emailAddress" ILIKE ${pattern})
         ))
@@ -79,7 +80,7 @@ export async function getMockInboxQueue(
       WHERE "messageId" = m."id" AND type = 'FROM' ORDER BY "id" LIMIT 1) p ON true
     WHERE (${filters.status} = 'ALL' OR l."workflowStatus" = ${filters.status})
     ORDER BY l."createdAt" DESC, l."id" DESC LIMIT ${page.take} OFFSET ${page.skip}`);
-  const selectedId = filters.selected ?? items[0]?.id;
+  const selectedId = filters.selected ? await resolveCanonicalThreadId(filters.selected, db) : items[0]?.id;
   const thread = selectedId ? await db.emailThread.findFirst({
     where: { id: selectedId, messages: { some: { direction: "INBOUND" } } },
     include: {
@@ -107,8 +108,8 @@ export async function getMockInboxQueue(
       },
     },
   }) : null;
-  const selected = thread ? { ...thread, messages: thread.messages, classification: thread.classifications[0] ?? null } : null;
-  return { items, selected, counts, pagination: page };
+  const selected = thread ? { ...thread, messages: thread.messages, classification: thread.classifications[0] && (thread.classifications[0].threadRevision === thread.workflowRevision || (thread.classifications[0].threadRevision === null && thread.workflowRevision === 0)) ? thread.classifications[0] : null } : null;
+  return { items, selected, counts, pagination: page, resolvedFrom: filters.selected && selectedId !== filters.selected ? filters.selected : null };
 
 }
 

@@ -18,16 +18,23 @@ model EmailThread {
   wordpressId       String?
   artistEmail       String?
   isIncomplete      Boolean        @default(false)
+  mergedIntoThreadId String?        @db.Uuid
+  mergedAt           DateTime?
+  reconstructedAt    DateTime?
+  mergedInto         EmailThread?    @relation("ThreadLineage", fields: [mergedIntoThreadId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  mergedThreads      EmailThread[]   @relation("ThreadLineage")
   workflowRevision  Int            @default(0)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
-  messages          EmailMessage[]
+  messages          EmailMessage[] @relation("CurrentThread")
+  originalMessages  EmailMessage[] @relation("OriginalThread")
   classifications   Classification[]
   drafts            Draft[]
   bugTickets         BugTicket[]
   replyDispatches    ReplyDispatch[]
 
   @@index([status])
+  @@index([mergedIntoThreadId])
   @@index([automationState])
   @@index([artistId])
   @@index([wordpressId])
@@ -38,6 +45,7 @@ model EmailThread {
 model EmailMessage {
   id                        String                       @id @default(uuid()) @db.Uuid
   threadId                  String                       @db.Uuid
+  originalThreadId          String?                      @db.Uuid
   messageId                 String?                      @unique
   sourceProvider            ExternalEmailProvider        @default(EML_IMPORT)
   externalMessageId         String?
@@ -64,12 +72,14 @@ model EmailMessage {
   parseStatus               String                       @default("PARSED")
   parseWarnings             String[]                     @default([])
   createdAt                 DateTime                     @default(now())
-  thread                    EmailThread                  @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  thread                    EmailThread                  @relation("CurrentThread", fields: [threadId], references: [id], onDelete: Restrict)
+  originalThread            EmailThread?                 @relation("OriginalThread", fields: [originalThreadId], references: [id], onDelete: Restrict, onUpdate: NoAction)
   participants              EmailParticipant[]
   attachments               AttachmentMetadata[]
   knowledgeReviewEvents     KnowledgeSourceReviewEvent[]
   knowledgeCandidateSources KnowledgeCandidateSource[]
 
+  @@index([originalThreadId])
   @@index([threadId, sentAt])
   @@unique([sourceProvider, externalMessageId])
   @@index([sourceProvider, externalThreadId])

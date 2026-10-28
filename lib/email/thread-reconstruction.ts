@@ -9,6 +9,7 @@ export type ThreadPlanningMessage = {
   references: string[];
   sentAt: Date | null;
   createdAt: Date;
+  fingerprint?: string;
 };
 
 export type PlannedThread = {
@@ -28,7 +29,7 @@ export type ThreadReconstructionPlan = {
     multiMessageThreads: number;
     standaloneThreads: number;
     messagesToMove: number;
-    threadsToRemove: number;
+    threadsToArchive: number;
     incompleteThreads: number;
     matchedRelations: number;
     missingReferenceOccurrences: number;
@@ -37,7 +38,7 @@ export type ThreadReconstructionPlan = {
     largestThreadSize: number;
   };
   threads: PlannedThread[];
-  threadIdsToRemove: string[];
+  threadIdsToArchive: string[];
 };
 
 export async function planThreadReconstruction(
@@ -52,6 +53,7 @@ export async function planThreadReconstruction(
       references: true,
       sentAt: true,
       createdAt: true,
+      fingerprint: true,
     },
     orderBy: { id: "asc" },
   });
@@ -62,6 +64,9 @@ export async function planThreadReconstruction(
 export function buildThreadReconstructionPlan(
   messages: ThreadPlanningMessage[],
 ): ThreadReconstructionPlan {
+  if (new Set(messages.map((m) => m.id)).size !== messages.length) throw new Error("Duplicate message identity in reconstruction.");
+  const internetIds = messages.flatMap((m) => m.messageId ? [m.messageId] : []);
+  if (new Set(internetIds).size !== internetIds.length) throw new Error("Duplicate Internet message identity in reconstruction.");
   const orderedMessages = [...messages].sort(compareMessages);
   const messagesById = new Map(orderedMessages.map((message) => [message.id, message]));
   const messagesByInternetId = new Map(
@@ -70,6 +75,12 @@ export function buildThreadReconstructionPlan(
     ),
   );
   const unionFind = new UnionFind(orderedMessages.map((message) => message.id));
+  // Existing conversations are indivisible: never guess how historical records should be split.
+  const firstByThread = new Map<string, string>();
+  for (const message of orderedMessages) {
+    const first = firstByThread.get(message.threadId);
+    if (first) unionFind.union(first, message.id); else firstByThread.set(message.threadId, message.id);
+  }
   const missingByMessage = new Map<string, number>();
   const uniqueMissingReferences = new Set<string>();
   const matchedEdges = new Set<string>();
@@ -146,7 +157,7 @@ export function buildThreadReconstructionPlan(
 
   const currentThreadIds = new Set(orderedMessages.map((message) => message.threadId));
   const retainedThreadIds = new Set(threads.map((thread) => thread.retainedThreadId));
-  const threadIdsToRemove = [...currentThreadIds]
+  const threadIdsToArchive = [...currentThreadIds]
     .filter((threadId) => !retainedThreadIds.has(threadId))
     .sort();
   const messagesToMove = threads.reduce(
@@ -166,7 +177,7 @@ export function buildThreadReconstructionPlan(
       multiMessageThreads: threads.filter((thread) => thread.messageIds.length > 1).length,
       standaloneThreads: threads.filter((thread) => thread.messageIds.length === 1).length,
       messagesToMove,
-      threadsToRemove: threadIdsToRemove.length,
+      threadsToArchive: threadIdsToArchive.length,
       incompleteThreads: threads.filter((thread) => thread.isIncomplete).length,
       matchedRelations: matchedEdges.size,
       missingReferenceOccurrences,
@@ -175,7 +186,7 @@ export function buildThreadReconstructionPlan(
       largestThreadSize: Math.max(0, ...threads.map((thread) => thread.messageIds.length)),
     },
     threads,
-    threadIdsToRemove,
+    threadIdsToArchive,
   };
 }
 
@@ -189,33 +200,28 @@ function compareMessages(a: ThreadPlanningMessage, b: ThreadPlanningMessage): nu
     return 1;
   }
 
+  const stableIdentityDifference = (a.messageId ?? a.fingerprint ?? a.id).localeCompare(b.messageId ?? b.fingerprint ?? b.id);
+  if (stableIdentityDifference) return stableIdentityDifference;
   const createdDifference = a.createdAt.getTime() - b.createdAt.getTime();
   return createdDifference !== 0 ? createdDifference : a.id.localeCompare(b.id);
 }
 
 class UnionFind {
   private readonly parent = new Map<string, string>();
-
-  constructor(ids: string[]) {
-    ids.forEach((id) => this.parent.set(id, id));
-  }
-
+  private readonly size = new Map<string, number>();
+  constructor(ids: string[]) { ids.forEach((id) => { this.parent.set(id, id); this.size.set(id, 1); }); }
   find(id: string): string {
-    const parent = this.parent.get(id);
-    if (!parent) throw new Error("Unknown message in thread reconstruction.");
-    if (parent === id) return id;
-
-    const root = this.find(parent);
-    this.parent.set(id, root);
+    if (!this.parent.has(id)) throw new Error("Unknown message in thread reconstruction.");
+    let root = id;
+    while (this.parent.get(root) !== root) root = this.parent.get(root)!;
+    while (id !== root) { const parent = this.parent.get(id)!; this.parent.set(id, root); id = parent; }
     return root;
   }
-
   union(a: string, b: string): void {
-    const aRoot = this.find(a);
-    const bRoot = this.find(b);
+    let aRoot = this.find(a), bRoot = this.find(b);
     if (aRoot === bRoot) return;
-
-    const [retainedRoot, mergedRoot] = [aRoot, bRoot].sort();
-    this.parent.set(mergedRoot, retainedRoot);
+    if (this.size.get(aRoot)! < this.size.get(bRoot)! || (this.size.get(aRoot) === this.size.get(bRoot) && aRoot > bRoot)) [aRoot, bRoot] = [bRoot, aRoot];
+    this.parent.set(bRoot, aRoot);
+    this.size.set(aRoot, this.size.get(aRoot)! + this.size.get(bRoot)!);
   }
 }

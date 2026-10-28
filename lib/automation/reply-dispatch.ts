@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
 import { evaluateAutoReplyPolicy } from "@/lib/automation/reply-policy";
 import { z } from "zod";
+import { workflowTransaction, WorkflowConflictError } from "@/lib/workflow/transaction";
 
 const scheduleSchema = z.object({
   draftId: z.string().uuid(),
@@ -62,6 +63,7 @@ export async function scheduleReplyDispatch(
     },
   });
   if (!draft) throw new Error("The selected draft no longer exists.");
+  if (draft.thread.mergedIntoThreadId || draft.knowledgeReviewReason === "THREAD_RECONSTRUCTED") throw new WorkflowConflictError();
   if (draft.status !== "GENERATED") throw new Error("Only a generated draft can be scheduled.");
 
   if (request.approvalMode === "HUMAN_CONFIRMED" && !draft.approvedAt) {
@@ -94,7 +96,9 @@ export async function scheduleReplyDispatch(
   const idempotencyKey = `reply:${draft.id}`;
 
   try {
-    return await db.$transaction(async (transaction) => {
+    return await workflowTransaction(db, async (transaction) => {
+      const current = await transaction.draft.findUnique({ where: { id: draft.id }, include: { thread: true } });
+      if (!current || current.status !== "GENERATED" || current.thread.mergedIntoThreadId || current.knowledgeReviewReason === "THREAD_RECONSTRUCTED") throw new WorkflowConflictError();
       const existing = await transaction.replyDispatch.findUnique({
         where: { draftId: draft.id },
       });

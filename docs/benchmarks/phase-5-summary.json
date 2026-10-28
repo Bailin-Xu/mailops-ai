@@ -1,0 +1,1625 @@
+{
+  "recordedAt": "2026-10-28T20:05:15.250Z",
+  "corpusVersion": "neutral-thread-corpus-v1",
+  "implementationHash": "d0430b020b190277597030190369a6c1a3b7f8b3e905558eae571c6750e23fdc",
+  "baselineRef": "de0d86c",
+  "hardware": {
+    "platform": "darwin",
+    "release": "24.6.0",
+    "architecture": "arm64",
+    "cpu": "Apple M3",
+    "logicalCpus": 8,
+    "hostMemoryBytes": 17179869184,
+    "node": "v24.3.0",
+    "docker": {
+      "logicalCpus": 8,
+      "memoryBytes": 8218316800,
+      "engineVersion": "28.1.1",
+      "collection": "read after measurement; CPU affinity and exclusive host use were not enforced"
+    }
+  },
+  "method": {
+    "repetitions": 3,
+    "plannerWarmups": 1,
+    "queryWarmups": 1,
+    "querySamples": 3,
+    "databaseCache": "warm after synthetic seeding/ANALYZE and unmeasured reads; OS/PostgreSQL caches not flushed",
+    "memory": "per-worker maxRSS bytes plus live JS heap deltas; peak includes setup; deltas are not peak allocations",
+    "database": "separate generated scratch database per scale; reset/reseed between repetitions; no development target"
+  },
+  "scales": [
+    {
+      "size": 1000,
+      "planner": {
+        "baseline-normal": {
+          "size": 1000,
+          "deep": false,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 2.2524999999999977,
+              "heapDeltaBytes": 4739672
+            },
+            {
+              "elapsedMs": 2.751499999999993,
+              "heapDeltaBytes": 5088464
+            },
+            {
+              "elapsedMs": 3.7320829999999887,
+              "heapDeltaBytes": 4729024
+            }
+          ],
+          "maxRssBytes": 127352832
+        },
+        "baseline-deep": {
+          "size": 1000,
+          "deep": true,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 1.382125000000002,
+              "heapDeltaBytes": 3613608
+            },
+            {
+              "elapsedMs": 1.4410419999999817,
+              "heapDeltaBytes": 3640448
+            },
+            {
+              "elapsedMs": 1.3462920000000054,
+              "heapDeltaBytes": 3613168
+            }
+          ],
+          "maxRssBytes": 116162560
+        },
+        "current-normal": {
+          "size": 1000,
+          "deep": false,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 2.366333999999995,
+              "heapDeltaBytes": 4350464
+            },
+            {
+              "elapsedMs": 2.4330420000000004,
+              "heapDeltaBytes": 4373872
+            },
+            {
+              "elapsedMs": 2.191459000000009,
+              "heapDeltaBytes": 4342832
+            }
+          ],
+          "maxRssBytes": 123322368
+        },
+        "current-deep": {
+          "size": 1000,
+          "deep": true,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 1.9067919999999958,
+              "heapDeltaBytes": 3137520
+            },
+            {
+              "elapsedMs": 1.8215409999999963,
+              "heapDeltaBytes": 3138984
+            },
+            {
+              "elapsedMs": 1.7890829999999767,
+              "heapDeltaBytes": 3134992
+            }
+          ],
+          "maxRssBytes": 110362624
+        }
+      },
+      "database": {
+        "settings": {
+          "version": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+          "shared_buffers": "128MB",
+          "work_mem": "4MB"
+        },
+        "maxRssBytes": 459292672,
+        "samples": [
+          {
+            "planMs": 38.76499999999987,
+            "applyMs": 143.680292,
+            "heapBeforeBytes": 35826632,
+            "heapAfterApplyBytes": 78290560,
+            "heapDeltaBytes": 42463928,
+            "maxRssBytes": 441974784,
+            "knowledgeCount": 100,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 900,
+              "archivedThreads": 900,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          },
+          {
+            "planMs": 37.958624999999756,
+            "applyMs": 129.40966600000002,
+            "heapBeforeBytes": 36772912,
+            "heapAfterApplyBytes": 77690032,
+            "heapDeltaBytes": 40917120,
+            "maxRssBytes": 459292672,
+            "knowledgeCount": 100,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 900,
+              "archivedThreads": 900,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          },
+          {
+            "planMs": 38.72149999999965,
+            "applyMs": 126.48933300000044,
+            "heapBeforeBytes": 37122544,
+            "heapAfterApplyBytes": 77869152,
+            "heapDeltaBytes": 40746608,
+            "maxRssBytes": 459292672,
+            "knowledgeCount": 100,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 900,
+              "archivedThreads": 900,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          }
+        ],
+        "beforeQueries": {
+          "inboxFirst": {
+            "elapsedMs": {
+              "median": 8.602082999999993,
+              "min": 7.529833999999937,
+              "max": 14.144625000000133,
+              "samples": [
+                14.144625000000133,
+                8.602082999999993,
+                8.532208000000082,
+                9.727499999999964,
+                7.8022500000001855,
+                9.037708000000293,
+                10.020916999999827,
+                7.789667000000009,
+                7.529833999999937
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 7138,
+              "max": 7138
+            },
+            "total": [
+              667
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "inboxFiltered": {
+            "elapsedMs": {
+              "median": 16.944417000000158,
+              "min": 16.576790999999957,
+              "max": 17.94616599999995,
+              "samples": [
+                17.94616599999995,
+                17.191334000000097,
+                17.142708999999968,
+                17.01745800000026,
+                16.587291999999707,
+                16.886583999999857,
+                16.944417000000158,
+                16.576790999999957,
+                16.816874999999527
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 5310,
+              "max": 5310
+            },
+            "total": [
+              1
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "inboxLast": {
+            "elapsedMs": {
+              "median": 13.369125000000167,
+              "min": 12.682958999999755,
+              "max": 18.460666999999376,
+              "samples": [
+                16.178540999999996,
+                13.262958000000026,
+                13.369125000000167,
+                13.243291999999656,
+                12.911082999999962,
+                14.715499999999793,
+                12.682958999999755,
+                14.426500000000487,
+                18.460666999999376
+              ]
+            },
+            "rows": [
+              7
+            ],
+            "responseBytes": {
+              "min": 5892,
+              "max": 5892
+            },
+            "total": [
+              667
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "retrievalSpecific": {
+            "elapsedMs": {
+              "median": 0.5648750000000291,
+              "min": 0.49012500000026193,
+              "max": 0.6717089999999644,
+              "samples": [
+                0.6717089999999644,
+                0.6224999999999454,
+                0.6046249999999418,
+                0.5648750000000291,
+                0.5639169999999467,
+                0.5172499999998763,
+                0.6270829999994021,
+                0.5275830000000497,
+                0.49012500000026193
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 404,
+              "max": 404
+            }
+          },
+          "retrievalBroad": {
+            "elapsedMs": {
+              "median": 1.8805829999992056,
+              "min": 1.7847500000002583,
+              "max": 1.9789579999996931,
+              "samples": [
+                1.9689579999999296,
+                1.9111249999998563,
+                1.8507500000000618,
+                1.7847500000002583,
+                1.818000000000211,
+                1.7876670000000559,
+                1.8805829999992056,
+                1.9789579999996931,
+                1.9323340000000826
+              ]
+            },
+            "rows": [
+              8
+            ],
+            "responseBytes": {
+              "min": 3201,
+              "max": 3201
+            }
+          },
+          "retrievalExplain": [
+            {
+              "executionTimeMs": 0.095,
+              "planningTimeMs": 0.091,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 8,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.08,
+              "planningTimeMs": 0.09,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 8,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.065,
+              "planningTimeMs": 0.08,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 8,
+              "sharedReadBlocks": 0
+            }
+          ]
+        },
+        "afterQueries": {
+          "inboxFirst": {
+            "elapsedMs": {
+              "median": 5.23824999999988,
+              "min": 4.795916000000034,
+              "max": 6.348958000000039,
+              "samples": [
+                5.612415999999939,
+                6.01666699999987,
+                5.145582999999988,
+                6.348958000000039,
+                5.23824999999988,
+                4.878416999999899,
+                5.213959000000614,
+                5.706125000000611,
+                4.795916000000034
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 28186,
+              "max": 28186
+            },
+            "total": [
+              100
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "inboxFiltered": {
+            "elapsedMs": {
+              "median": 17.923333000000184,
+              "min": 16.350999999999658,
+              "max": 18.87816600000042,
+              "samples": [
+                16.350999999999658,
+                17.923333000000184,
+                18.685042000000067,
+                18.04641700000002,
+                17.811541000000034,
+                17.8073330000002,
+                18.87816600000042,
+                17.60187500000029,
+                18.47412499999973
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 24335,
+              "max": 24335
+            },
+            "total": [
+              1
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "inboxLast": {
+            "elapsedMs": {
+              "median": 8.576458000000002,
+              "min": 7.669332999999824,
+              "max": 56.22954200000004,
+              "samples": [
+                8.459083000000192,
+                8.543625000000247,
+                16.563916999999947,
+                7.903999999999996,
+                8.576458000000002,
+                56.22954200000004,
+                10.84154099999978,
+                12.822458000000552,
+                7.669332999999824
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 28150,
+              "max": 28150
+            },
+            "total": [
+              100
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "retrievalSpecific": {
+            "elapsedMs": {
+              "median": 0.6554580000001806,
+              "min": 0.5405829999999696,
+              "max": 1.5058329999997113,
+              "samples": [
+                0.622957999999926,
+                0.6156670000000304,
+                0.5405829999999696,
+                0.8628750000002583,
+                1.5058329999997113,
+                1.0687079999997877,
+                0.6554580000001806,
+                0.6639169999998558,
+                0.6195419999994556
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 404,
+              "max": 404
+            }
+          },
+          "retrievalBroad": {
+            "elapsedMs": {
+              "median": 2.0044159999997646,
+              "min": 1.7961669999999685,
+              "max": 2.6247920000000704,
+              "samples": [
+                1.881666999999652,
+                1.8431250000003274,
+                1.7961669999999685,
+                2.336749999999938,
+                2.6247920000000704,
+                2.4047919999998157,
+                2.0044159999997646,
+                2.0822079999998095,
+                1.9673750000001746
+              ]
+            },
+            "rows": [
+              8
+            ],
+            "responseBytes": {
+              "min": 3201,
+              "max": 3201
+            }
+          },
+          "retrievalExplain": [
+            {
+              "executionTimeMs": 0.061,
+              "planningTimeMs": 0.063,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 8,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.063,
+              "planningTimeMs": 0.085,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 8,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.068,
+              "planningTimeMs": 0.07,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 8,
+              "sharedReadBlocks": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "size": 10000,
+      "planner": {
+        "baseline-normal": {
+          "size": 10000,
+          "deep": false,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 22.376750000000015,
+              "heapDeltaBytes": 15831000
+            },
+            {
+              "elapsedMs": 18.23120800000001,
+              "heapDeltaBytes": 11847808
+            },
+            {
+              "elapsedMs": 20.805833000000007,
+              "heapDeltaBytes": 15925224
+            }
+          ],
+          "maxRssBytes": 168738816
+        },
+        "baseline-deep": {
+          "size": 10000,
+          "deep": true,
+          "status": "FAILED",
+          "error": "STACK_LIMIT",
+          "samples": [],
+          "maxRssBytes": 164626432
+        },
+        "current-normal": {
+          "size": 10000,
+          "deep": false,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 25.91508300000001,
+              "heapDeltaBytes": 27119904
+            },
+            {
+              "elapsedMs": 25.256,
+              "heapDeltaBytes": 10679880
+            },
+            {
+              "elapsedMs": 23.956999999999994,
+              "heapDeltaBytes": 9601672
+            }
+          ],
+          "maxRssBytes": 194215936
+        },
+        "current-deep": {
+          "size": 10000,
+          "deep": true,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 19.604124999999982,
+              "heapDeltaBytes": 15256752
+            },
+            {
+              "elapsedMs": 15.530917000000017,
+              "heapDeltaBytes": 10034320
+            },
+            {
+              "elapsedMs": 19.471832999999975,
+              "heapDeltaBytes": 14888552
+            }
+          ],
+          "maxRssBytes": 158203904
+        }
+      },
+      "database": {
+        "settings": {
+          "version": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+          "shared_buffers": "128MB",
+          "work_mem": "4MB"
+        },
+        "maxRssBytes": 637616128,
+        "samples": [
+          {
+            "planMs": 299.7802920000013,
+            "applyMs": 1327.268750000001,
+            "heapBeforeBytes": 44946256,
+            "heapAfterApplyBytes": 155315984,
+            "heapDeltaBytes": 110369728,
+            "maxRssBytes": 637616128,
+            "knowledgeCount": 1000,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 9000,
+              "archivedThreads": 9000,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          },
+          {
+            "planMs": 303.9545419999995,
+            "applyMs": 1467.4833330000001,
+            "heapBeforeBytes": 47351208,
+            "heapAfterApplyBytes": 164276072,
+            "heapDeltaBytes": 116924864,
+            "maxRssBytes": 637616128,
+            "knowledgeCount": 1000,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 9000,
+              "archivedThreads": 9000,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          },
+          {
+            "planMs": 314.6937909999979,
+            "applyMs": 1286.2607919999973,
+            "heapBeforeBytes": 47577584,
+            "heapAfterApplyBytes": 156889648,
+            "heapDeltaBytes": 109312064,
+            "maxRssBytes": 637616128,
+            "knowledgeCount": 1000,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 9000,
+              "archivedThreads": 9000,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          }
+        ],
+        "beforeQueries": {
+          "inboxFirst": {
+            "elapsedMs": {
+              "median": 17.68016699999862,
+              "min": 16.49512500000128,
+              "max": 47.30683399999998,
+              "samples": [
+                47.30683399999998,
+                25.964500000000044,
+                20.58312500000011,
+                17.68016699999862,
+                17.18091699999968,
+                16.657875000000786,
+                16.49512500000128,
+                19.49920800000109,
+                16.870624999999563
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 7147,
+              "max": 7147
+            },
+            "total": [
+              6667
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "inboxFiltered": {
+            "elapsedMs": {
+              "median": 140.99045800000022,
+              "min": 134.06187499999942,
+              "max": 163.27691700000105,
+              "samples": [
+                157.0922499999997,
+                158.4364169999999,
+                151.24812499999916,
+                163.27691700000105,
+                135.0193330000002,
+                140.99045800000022,
+                134.06187499999942,
+                136.8269169999985,
+                134.43074999999953
+              ]
+            },
+            "rows": [
+              7
+            ],
+            "responseBytes": {
+              "min": 7881,
+              "max": 7881
+            },
+            "total": [
+              7
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "inboxLast": {
+            "elapsedMs": {
+              "median": 68.12374999999884,
+              "min": 64.36545800000022,
+              "max": 85.23704200000066,
+              "samples": [
+                85.23704200000066,
+                72.12699999999859,
+                69.65608299999985,
+                67.16229200000089,
+                68.12374999999884,
+                65.45891699999993,
+                69.4194580000003,
+                66.27958399999989,
+                64.36545800000022
+              ]
+            },
+            "rows": [
+              7
+            ],
+            "responseBytes": {
+              "min": 5899,
+              "max": 5899
+            },
+            "total": [
+              6667
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "retrievalSpecific": {
+            "elapsedMs": {
+              "median": 1.089708999999857,
+              "min": 0.8588749999998981,
+              "max": 1.307291000000987,
+              "samples": [
+                1.0899590000008175,
+                1.125625000000582,
+                0.8588749999998981,
+                0.9509160000015981,
+                0.9142910000009579,
+                0.9245420000006561,
+                1.1242500000007567,
+                1.307291000000987,
+                1.089708999999857
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 404,
+              "max": 404
+            }
+          },
+          "retrievalBroad": {
+            "elapsedMs": {
+              "median": 13.628666000000521,
+              "min": 13.242332999998325,
+              "max": 14.537500000000364,
+              "samples": [
+                13.84454100000039,
+                13.501749999999447,
+                14.537500000000364,
+                13.691915999999765,
+                13.451624999997875,
+                13.628666000000521,
+                13.242332999998325,
+                13.26287500000035,
+                14.109749999999622
+              ]
+            },
+            "rows": [
+              8
+            ],
+            "responseBytes": {
+              "min": 3201,
+              "max": 3201
+            }
+          },
+          "retrievalExplain": [
+            {
+              "executionTimeMs": 0.198,
+              "planningTimeMs": 0.109,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 38,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.186,
+              "planningTimeMs": 0.097,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 38,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.179,
+              "planningTimeMs": 0.07,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 38,
+              "sharedReadBlocks": 0
+            }
+          ]
+        },
+        "afterQueries": {
+          "inboxFirst": {
+            "elapsedMs": {
+              "median": 20.646458000001076,
+              "min": 19.47637499999837,
+              "max": 53.07204200000342,
+              "samples": [
+                20.605416000000332,
+                20.1284169999999,
+                20.646458000001076,
+                22.85425000000032,
+                22.895375000000058,
+                20.384915999999066,
+                21.161959000000934,
+                19.47637499999837,
+                53.07204200000342
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 28228,
+              "max": 28228
+            },
+            "total": [
+              1000
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "inboxFiltered": {
+            "elapsedMs": {
+              "median": 132.540332999999,
+              "min": 125.04133300000103,
+              "max": 217.1161659999998,
+              "samples": [
+                128.4405000000006,
+                132.540332999999,
+                140.3441670000011,
+                217.1161659999998,
+                146.19708300000275,
+                183.88433299999815,
+                126.12091599999985,
+                125.71345800000199,
+                125.04133300000103
+              ]
+            },
+            "rows": [
+              7
+            ],
+            "responseBytes": {
+              "min": 27010,
+              "max": 27010
+            },
+            "total": [
+              7
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "inboxLast": {
+            "elapsedMs": {
+              "median": 44.83708299999853,
+              "min": 38.23687500000233,
+              "max": 48.46162499999991,
+              "samples": [
+                39.65004100000078,
+                40.30620799999997,
+                45.04500000000007,
+                48.46162499999991,
+                44.83708299999853,
+                45.776458000000275,
+                40.14716699999917,
+                45.24695800000336,
+                38.23687500000233
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 28156,
+              "max": 28156
+            },
+            "total": [
+              1000
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "retrievalSpecific": {
+            "elapsedMs": {
+              "median": 0.9900420000012673,
+              "min": 0.8600409999999101,
+              "max": 1.8896249999997963,
+              "samples": [
+                1.8896249999997963,
+                0.8989579999997659,
+                1.1171250000006694,
+                1.0546659999999974,
+                1.0742920000011509,
+                0.9900420000012673,
+                0.9155839999984892,
+                0.881666999997833,
+                0.8600409999999101
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 404,
+              "max": 404
+            }
+          },
+          "retrievalBroad": {
+            "elapsedMs": {
+              "median": 13.779083999999784,
+              "min": 13.352125000001251,
+              "max": 51.00241599999936,
+              "samples": [
+                13.779083999999784,
+                13.683042000000569,
+                14.749582999998893,
+                16.25470900000073,
+                24.056541000001744,
+                51.00241599999936,
+                13.352125000001251,
+                13.554082999999082,
+                13.644000000000233
+              ]
+            },
+            "rows": [
+              8
+            ],
+            "responseBytes": {
+              "min": 3201,
+              "max": 3201
+            }
+          },
+          "retrievalExplain": [
+            {
+              "executionTimeMs": 0.059,
+              "planningTimeMs": 0.1,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 4,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.276,
+              "planningTimeMs": 0.195,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 38,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.182,
+              "planningTimeMs": 0.086,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 38,
+              "sharedReadBlocks": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "size": 50000,
+      "planner": {
+        "baseline-normal": {
+          "size": 50000,
+          "deep": false,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 113.60791699999999,
+              "heapDeltaBytes": 86301368
+            },
+            {
+              "elapsedMs": 125.72558300000003,
+              "heapDeltaBytes": 35079040
+            },
+            {
+              "elapsedMs": 123.37041599999998,
+              "heapDeltaBytes": 31343952
+            }
+          ],
+          "maxRssBytes": 340508672
+        },
+        "baseline-deep": {
+          "size": 50000,
+          "deep": true,
+          "status": "FAILED",
+          "error": "STACK_LIMIT",
+          "samples": [],
+          "maxRssBytes": 308494336
+        },
+        "current-normal": {
+          "size": 50000,
+          "deep": false,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 164.161542,
+              "heapDeltaBytes": 57271936
+            },
+            {
+              "elapsedMs": 177.982125,
+              "heapDeltaBytes": 67210312
+            },
+            {
+              "elapsedMs": 197.580417,
+              "heapDeltaBytes": 65072240
+            }
+          ],
+          "maxRssBytes": 349700096
+        },
+        "current-deep": {
+          "size": 50000,
+          "deep": true,
+          "status": "COMPLETED",
+          "samples": [
+            {
+              "elapsedMs": 121.1585,
+              "heapDeltaBytes": 58078000
+            },
+            {
+              "elapsedMs": 125.47920799999997,
+              "heapDeltaBytes": 66101080
+            },
+            {
+              "elapsedMs": 134.44241699999998,
+              "heapDeltaBytes": 53759392
+            }
+          ],
+          "maxRssBytes": 310837248
+        }
+      },
+      "database": {
+        "settings": {
+          "version": "PostgreSQL 17.10 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+          "shared_buffers": "128MB",
+          "work_mem": "4MB"
+        },
+        "maxRssBytes": 774569984,
+        "samples": [
+          {
+            "planMs": 1174.5102079999997,
+            "applyMs": 7051.812540999999,
+            "heapBeforeBytes": 83482576,
+            "heapAfterApplyBytes": 408636504,
+            "heapDeltaBytes": 325153928,
+            "maxRssBytes": 761167872,
+            "knowledgeCount": 5000,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 45000,
+              "archivedThreads": 45000,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          },
+          {
+            "planMs": 1135.3498330000002,
+            "applyMs": 6655.063624999995,
+            "heapBeforeBytes": 96211504,
+            "heapAfterApplyBytes": 382088120,
+            "heapDeltaBytes": 285876616,
+            "maxRssBytes": 761167872,
+            "knowledgeCount": 5000,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 45000,
+              "archivedThreads": 45000,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          },
+          {
+            "planMs": 1155.983957999997,
+            "applyMs": 6504.460000000006,
+            "heapBeforeBytes": 84640272,
+            "heapAfterApplyBytes": 355431704,
+            "heapDeltaBytes": 270791432,
+            "maxRssBytes": 774569984,
+            "knowledgeCount": 5000,
+            "membershipCorrect": true,
+            "replay": "ALREADY_APPLIED",
+            "applied": {
+              "status": "APPLIED",
+              "movedMessages": 45000,
+              "archivedThreads": 45000,
+              "invalidatedDrafts": 0,
+              "cancelledDispatches": 0
+            }
+          }
+        ],
+        "beforeQueries": {
+          "inboxFirst": {
+            "elapsedMs": {
+              "median": 92.06900000000314,
+              "min": 67.93945800000802,
+              "max": 194.5401669999992,
+              "samples": [
+                95.29279200000019,
+                78.51729100000011,
+                70.18316600000253,
+                137.93145799999184,
+                109.55004099999496,
+                194.5401669999992,
+                92.06900000000314,
+                67.93945800000802,
+                68.83250000000407
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 7155,
+              "max": 7155
+            },
+            "total": [
+              33333
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "inboxFiltered": {
+            "elapsedMs": {
+              "median": 779.6979580000043,
+              "min": 747.1339999999982,
+              "max": 851.6813340000081,
+              "samples": [
+                817.5276669999985,
+                747.1339999999982,
+                756.4144589999996,
+                851.6813340000081,
+                787.9966249999998,
+                784.4656669999968,
+                754.1635830000014,
+                779.6979580000043,
+                758.723874999996
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 9168,
+              "max": 9168
+            },
+            "total": [
+              33
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "inboxLast": {
+            "elapsedMs": {
+              "median": 495.114583999999,
+              "min": 445.38479100000404,
+              "max": 585.6574580000015,
+              "samples": [
+                456.4068330000009,
+                495.114583999999,
+                538.8154170000016,
+                585.6574580000015,
+                553.7801250000048,
+                455.5534580000094,
+                503.53366599998844,
+                459.24966600000334,
+                445.38479100000404
+              ]
+            },
+            "rows": [
+              3
+            ],
+            "responseBytes": {
+              "min": 4165,
+              "max": 4165
+            },
+            "total": [
+              33333
+            ],
+            "selectedMessages": [
+              1
+            ]
+          },
+          "retrievalSpecific": {
+            "elapsedMs": {
+              "median": 1.6234160000021802,
+              "min": 1.333582999999635,
+              "max": 1.8358330000010028,
+              "samples": [
+                1.8358330000010028,
+                1.7113749999989523,
+                1.6902909999989788,
+                1.333582999999635,
+                1.3759589999972377,
+                1.3989580000052229,
+                1.58162500000617,
+                1.6234160000021802,
+                1.7372920000052545
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 404,
+              "max": 404
+            }
+          },
+          "retrievalBroad": {
+            "elapsedMs": {
+              "median": 64.40529199999946,
+              "min": 60.33041599999706,
+              "max": 114.2090840000019,
+              "samples": [
+                114.2090840000019,
+                68.56224999999904,
+                64.40529199999946,
+                67.00345899999957,
+                62.4701250000071,
+                64.53279199999815,
+                60.33041599999706,
+                61.84399999999732,
+                62.18020799999067
+              ]
+            },
+            "rows": [
+              8
+            ],
+            "responseBytes": {
+              "min": 3201,
+              "max": 3201
+            }
+          },
+          "retrievalExplain": [
+            {
+              "executionTimeMs": 0.736,
+              "planningTimeMs": 0.132,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 171,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.706,
+              "planningTimeMs": 0.111,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 171,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.68,
+              "planningTimeMs": 0.09,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 171,
+              "sharedReadBlocks": 0
+            }
+          ]
+        },
+        "afterQueries": {
+          "inboxFirst": {
+            "elapsedMs": {
+              "median": 171.8145000000004,
+              "min": 157.6975000000093,
+              "max": 279.44541699999536,
+              "samples": [
+                211.14354199999798,
+                171.8145000000004,
+                166.75395800000115,
+                279.44541699999536,
+                168.7314999999944,
+                170.41129200000432,
+                203.31137500000477,
+                157.6975000000093,
+                221.13662499999919
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 27237,
+              "max": 27237
+            },
+            "total": [
+              5000
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "inboxFiltered": {
+            "elapsedMs": {
+              "median": 772.1527919999935,
+              "min": 747.0639169999922,
+              "max": 839.0402499999909,
+              "samples": [
+                807.9822500000009,
+                748.7236249999987,
+                777.484083000003,
+                839.0402499999909,
+                772.1527919999935,
+                762.2617090000131,
+                752.6504590000113,
+                775.4072499999893,
+                747.0639169999922
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 28331,
+              "max": 28331
+            },
+            "total": [
+              33
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "inboxLast": {
+            "elapsedMs": {
+              "median": 240.85216699999,
+              "min": 235.9635830000043,
+              "max": 275.65012499998556,
+              "samples": [
+                240.3466250000056,
+                249.41554200000246,
+                259.99154100000305,
+                268.281541999997,
+                240.85216699999,
+                239.48966599999403,
+                235.9635830000043,
+                237.06741700001294,
+                275.65012499998556
+              ]
+            },
+            "rows": [
+              10
+            ],
+            "responseBytes": {
+              "min": 28157,
+              "max": 28157
+            },
+            "total": [
+              5000
+            ],
+            "selectedMessages": [
+              10
+            ]
+          },
+          "retrievalSpecific": {
+            "elapsedMs": {
+              "median": 1.3676669999986188,
+              "min": 0.8008330000011483,
+              "max": 1.844916000001831,
+              "samples": [
+                1.844916000001831,
+                1.4468339999948512,
+                1.4650000000037835,
+                0.8008330000011483,
+                1.3676669999986188,
+                1.2759579999983544,
+                1.2547079999931157,
+                1.1699999999837019,
+                1.6674169999896549
+              ]
+            },
+            "rows": [
+              1
+            ],
+            "responseBytes": {
+              "min": 404,
+              "max": 404
+            }
+          },
+          "retrievalBroad": {
+            "elapsedMs": {
+              "median": 61.50375000000349,
+              "min": 59.007666000004974,
+              "max": 65.86308300000383,
+              "samples": [
+                61.18904199999815,
+                63.062082999997074,
+                65.86308300000383,
+                59.9815840000083,
+                60.098583999992115,
+                59.007666000004974,
+                61.57066599998507,
+                62.81750000000466,
+                61.50375000000349
+              ]
+            },
+            "rows": [
+              8
+            ],
+            "responseBytes": {
+              "min": 3201,
+              "max": 3201
+            }
+          },
+          "retrievalExplain": [
+            {
+              "executionTimeMs": 0.697,
+              "planningTimeMs": 0.115,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 171,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.064,
+              "planningTimeMs": 0.103,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 4,
+              "sharedReadBlocks": 0
+            },
+            {
+              "executionTimeMs": 0.65,
+              "planningTimeMs": 0.097,
+              "nodeTypes": [
+                "Limit",
+                "Result",
+                "Sort",
+                "Bitmap Heap Scan",
+                "Bitmap Index Scan"
+              ],
+              "indexes": [
+                "KnowledgeEntry_active_search_en_idx"
+              ],
+              "sharedHitBlocks": 171,
+              "sharedReadBlocks": 0
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import {
   type TechnicalQueueProvider,
 } from "@/lib/integrations/technical-queue-provider";
 import { z } from "zod";
+import { workflowTransaction, WorkflowConflictError } from "@/lib/workflow/transaction";
 
 export const bugReportSchema = z.object({
   summary: z.string().trim().min(5).max(500),
@@ -46,7 +47,9 @@ export async function createBugTicket(
   }
 
   try {
-    return await db.$transaction(async (transaction) => {
+    return await workflowTransaction(db, async (transaction) => {
+      const current = await transaction.emailThread.findUnique({ where: { id: classification.threadId } });
+      if (!current || current.mergedIntoThreadId || (current.reconstructedAt && classification.threadRevision !== current.workflowRevision)) throw new WorkflowConflictError();
       const existing = await transaction.bugTicket.findUnique({
         where: { classificationId: classification.id },
       });

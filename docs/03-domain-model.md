@@ -37,6 +37,9 @@ Represents one email conversation.
 - `automationState`
 - `language`
 - optional external artist references: `artistId`, `wordpressId`, `artistEmail`
+- `workflowRevision`
+- `mergedIntoThreadId`, `mergedAt` (preserved historical alias)
+- `reconstructedAt`
 - `isIncomplete`
 - `createdAt`
 - `updatedAt`
@@ -46,7 +49,8 @@ Represents one email conversation.
 - groups related messages;
 - stores the current workflow state;
 - links classification, drafts, and knowledge candidates;
-- indicates whether thread reconstruction may be incomplete.
+- indicates whether thread reconstruction may be incomplete;
+- retains archived identity/associations while old links resolve to a canonical conversation.
 
 ### Relationships
 
@@ -65,7 +69,8 @@ Represents one parsed email message.
 ### Main Fields
 
 - `id`
-- `threadId`
+- `threadId` (current canonical membership)
+- `originalThreadId` (first recorded ownership; legacy baseline is current at migration; later merges retain it)
 - `messageId`
 - `sourceProvider`
 - `externalMessageId`
@@ -711,3 +716,14 @@ The following are intentionally deferred:
 10. provider-specific mailbox identifiers.
 
 These decisions should be resolved only when the relevant implementation phase begins.
+
+
+## Thread reconstruction attribution
+
+Phase 5 moves message membership while preserving original ownership and one-hop
+thread aliases. Classification/draft/dispatch/ticket FKs keep their original thread,
+source-message IDs and immutable generation evidence stay unchanged, and bounded
+inspection groups those histories under the current canonical conversation.
+Changed inbound context advances workflow revision and marks pending drafts stale;
+confirmed history is not rewritten. See the
+[reconstruction contract](15-phase-5-thread-reconstruction-and-scale.md).
