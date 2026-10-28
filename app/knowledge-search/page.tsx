@@ -74,7 +74,7 @@ export default async function KnowledgeSearchPage({ searchParams }: PageProps) {
                   <h3>{result.title}</h3>
                   <p className="knowledge-result-question">{result.canonicalQuestion}</p>
                   <p lang={result.language}>{result.answer}</p>
-                  <Link href={`/knowledge-candidates?status=APPROVED&selected=${result.sourceCandidateId}`}>Inspect approved source →</Link>
+                  <Link href={`/knowledge/${result.id}`}>Review versions &amp; affected drafts →</Link> <Link href={`/knowledge-candidates?status=APPROVED&selected=${result.sourceCandidateId}`}>Inspect approved source →</Link>
                 </div>
               </article>
             ))}

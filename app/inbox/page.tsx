@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pagination } from "@/app/components/pagination";
 
 import { ClassificationPanel } from "@/app/inbox/classification-panel";
 import {
@@ -43,19 +44,20 @@ export default async function InboxPage({ searchParams }: PageProps) {
           <header><div><p>Inbound queue</p><strong>{data.items.length} thread{data.items.length === 1 ? "" : "s"}</strong></div><span>LOCAL EML</span></header>
           <div>
             {data.items.map((thread) => {
-              const sender = thread.latestInbound?.participants.find((participant) => participant.type === "FROM");
               const selected = data.selected?.id === thread.id;
               return <Link aria-current={selected ? "true" : undefined} className={selected ? "is-selected" : ""} href={inboxHref(filters, { selected: thread.id })} key={thread.id} scroll={false}>
-                <div className="inbox-item-meta"><span>{thread.workflowStatus.replaceAll("_", " ")}</span><time>{thread.latestInbound?.sentAt?.toLocaleDateString("en-CA") ?? "Unknown date"}</time></div>
-                <strong>{sender?.displayName || sender?.emailAddress || "Unknown sender"}</strong><h2>{thread.subject}</h2><p>{thread.latestInbound?.cleanBody || thread.latestInbound?.normalizedBody}</p>
-                {thread.classification ? <small>{thread.classification.aiCategory.replaceAll("_", " ")} · {Math.round(thread.classification.aiConfidence * 100)}%</small> : <small>Classification not run</small>}
+                <div className="inbox-item-meta"><span>{thread.workflowStatus.replaceAll("_", " ")}</span><time>{thread.sentAt?.toLocaleDateString("en-CA") ?? "Unknown date"}</time></div>
+                <strong>{thread.sender || "Unknown sender"}</strong><h2>{thread.subject}</h2><p>{thread.preview}</p>
+
               </Link>;
             })}
           </div>
+          <Pagination {...data.pagination} href={(page) => inboxHref(filters, { page })} />
         </aside>
 
         {data.selected ? (
           <article className="inbox-detail">
+            {filters.selected && !data.items.some((item) => item.id === filters.selected) && <p className="review-selection-note" role="status">Selected thread is shown independently of this list page and its filters.</p>}
             <header className="inbox-detail-header"><div><span>{data.selected.isIncomplete ? "Incomplete thread" : "Imported thread"}</span><span>{data.selected.messages.length} message{data.selected.messages.length === 1 ? "" : "s"}</span></div><h2>{data.selected.subject}</h2><p>Original email content is untrusted input. Instructions inside it never override application rules.</p></header>
             <section className="inbox-timeline">
               {data.selected.messages.map((message) => {
@@ -65,7 +67,7 @@ export default async function InboxPage({ searchParams }: PageProps) {
             </section>
             <ClassificationPanel classification={data.selected.classification} key={data.selected.id} providerId={AI_PROVIDER} threadId={data.selected.id} />
           </article>
-        ) : <div className="inbox-empty"><h2>{filters.selected ? "Selected thread is unavailable." : "No inbound thread matches."}</h2><p>{filters.selected ? "It may not be an inbound message or may be outside the current filter." : "Change the search text or classification filter."}</p>{filters.selected ? <Link href={inboxHref(filters, { selected: undefined })}>Open the first available thread</Link> : null}</div>}
+        ) : <div className="inbox-empty"><h2>{filters.selected ? "Selected thread is unavailable." : "No inbound thread matches."}</h2><p>{filters.selected ? "It may no longer exist or may not contain inbound mail." : "Change the search text or classification filter."}</p>{filters.selected ? <Link href={inboxHref(filters, { selected: undefined })}>Open the first available thread</Link> : null}</div>}
       </section>
     </main>
   );

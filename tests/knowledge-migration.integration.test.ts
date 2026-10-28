@@ -58,6 +58,11 @@ it("upgrades real pre-phase-2 schema/data without inventing old draft evidence, 
     expect(drafts.find((draft) => draft.id === ids.pending)).toMatchObject({ knowledgeReviewReason: "LEGACY_EVIDENCE_UNVERIFIED" });
     expect(drafts.find((draft) => draft.id === ids.sent)).toMatchObject({ knowledgeReviewRequiredAt: null, approvedBody: "Exact historical approved text" });
     expect((await client.query('SELECT "threadId" FROM "EmailMessage" WHERE "id" = $1', [ids.message])).rows[0].threadId).toBe(ids.thread);
+    // Phase 4 adds review state without changing historical final text or evidence.
+    await client.query(await readFile(resolve("prisma/migrations/20261028153000_add_draft_review/migration.sql"), "utf8"));
+    expect((await oldDrafts()).rows).toEqual(before);
+    const reviewed = (await client.query('SELECT "reviewRevision", "editedBody", "rejectedAt" FROM "Draft"')).rows;
+    expect(reviewed.every((draft) => draft.reviewRevision === 0 && draft.editedBody === null && draft.rejectedAt === null)).toBe(true);
   } finally {
     await client.end();
     if (created) await admin.query(`DROP DATABASE "${scratchName}" WITH (FORCE)`);

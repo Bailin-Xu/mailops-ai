@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
 import { z } from "zod";
+import { parsePage, pagination } from "@/lib/ui/pagination";
 
 export const inboxStatusValues = ["ALL", "UNPROCESSED", "NEEDS_ACTION", "COMPLETED"] as const;
 export type InboxStatus = (typeof inboxStatusValues)[number];
@@ -9,6 +10,7 @@ export type InboxFilters = {
   status: InboxStatus;
   q: string;
   selected?: string;
+  page?: number;
 };
 
 export function parseInboxFilters(
@@ -23,16 +25,19 @@ export function parseInboxFilters(
       ? (rawStatus as InboxStatus)
       : "ALL",
     q: (first(input.q) ?? "").trim().slice(0, 300),
+    page: parsePage(input.page),
     selected: z.string().uuid().safeParse(rawSelected).success ? rawSelected : undefined,
   };
 }
 
 export function inboxHref(filters: InboxFilters, updates: Partial<InboxFilters>) {
   const next = { ...filters, ...updates };
+  if (("status" in updates || "q" in updates) && !("page" in updates)) next.page = 1;
   const params = new URLSearchParams();
   if (next.status !== "ALL") params.set("status", next.status);
   if (next.q) params.set("q", next.q);
   if (next.selected) params.set("selected", next.selected);
+  if (next.page && next.page > 1) params.set("page", String(next.page));
   const query = params.toString();
   return `/inbox${query ? `?${query}` : ""}`;
 }
@@ -41,44 +46,45 @@ export async function getMockInboxQueue(
   filters: InboxFilters,
   db: PrismaClient = getDb(),
 ) {
-  const where: Prisma.EmailThreadWhereInput = {
-    messages: { some: { direction: "INBOUND" } },
-    ...(filters.q
-      ? {
-          OR: [
-            { subject: { contains: filters.q, mode: "insensitive" as const } },
-            {
-              messages: {
-                some: {
-                  direction: "INBOUND" as const,
-                  OR: [
-                    { cleanBody: { contains: filters.q, mode: "insensitive" as const } },
-                    { normalizedBody: { contains: filters.q, mode: "insensitive" as const } },
-                    {
-                      participants: {
-                        some: {
-                          OR: [
-                            { displayName: { contains: filters.q, mode: "insensitive" as const } },
-                            { emailAddress: { contains: filters.q, mode: "insensitive" as const } },
-                          ],
-                        },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        }
-      : {}),
-  };
-
-  const threads = await db.emailThread.findMany({
-    where,
-    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+  // SQL computes the latest classification without loading every thread's history.
+  const pattern = `%${filters.q.replaceAll(/[\\%_]/gu, "\\$&")}%`;
+  const base = Prisma.sql`WITH listed AS (
+    SELECT t."id", t."subject", t."createdAt",
+      CASE WHEN c."id" IS NULL THEN 'UNPROCESSED'
+        WHEN c."processingStatus" IN ('SIMULATED_SENT', 'SIMULATED_FORWARDED', 'NO_ACTION') THEN 'COMPLETED'
+        ELSE 'NEEDS_ACTION' END AS "workflowStatus"
+    FROM "EmailThread" t
+    LEFT JOIN LATERAL (SELECT "id", "processingStatus" FROM "Classification"
+      WHERE "threadId" = t."id" ORDER BY "threadRevision" DESC NULLS LAST, "createdAt" DESC, "id" DESC LIMIT 1) c ON true
+    WHERE EXISTS (SELECT 1 FROM "EmailMessage" m WHERE m."threadId" = t."id" AND m."direction" = 'INBOUND')
+      AND (${filters.q} = '' OR t."subject" ILIKE ${pattern} OR EXISTS (
+        SELECT 1 FROM "EmailMessage" m WHERE m."threadId" = t."id" AND m."direction" = 'INBOUND'
+        AND (m."cleanBody" ILIKE ${pattern} OR m."normalizedBody" ILIKE ${pattern} OR EXISTS (
+          SELECT 1 FROM "EmailParticipant" p WHERE p."messageId" = m."id"
+          AND (p."displayName" ILIKE ${pattern} OR p."emailAddress" ILIKE ${pattern})
+        ))
+      ))
+  )`;
+  const groups = await db.$queryRaw<Array<{ workflowStatus: string; count: number }>>(Prisma.sql`${base}
+    SELECT "workflowStatus", count(*)::int AS count FROM listed GROUP BY "workflowStatus"`);
+  const counts = { ALL: 0, UNPROCESSED: 0, NEEDS_ACTION: 0, COMPLETED: 0 };
+  for (const row of groups) { counts[row.workflowStatus as Exclude<InboxStatus, "ALL">] = row.count; counts.ALL += row.count; }
+  const page = pagination(counts[filters.status], filters.page);
+  const items = await db.$queryRaw<Array<{ id: string; subject: string; workflowStatus: string; preview: string; sentAt: Date | null; sender: string | null }>>(Prisma.sql`${base}
+    SELECT l."id", l."subject", l."workflowStatus", m.preview, m."sentAt", p.sender FROM listed l
+    JOIN LATERAL (SELECT "id", "sentAt", substring(coalesce(nullif("cleanBody", ''), "normalizedBody"), 1, 240) AS preview
+      FROM "EmailMessage" WHERE "threadId" = l."id" AND "direction" = 'INBOUND'
+      ORDER BY "sentAt" DESC NULLS LAST, "createdAt" DESC, "id" DESC LIMIT 1) m ON true
+    LEFT JOIN LATERAL (SELECT coalesce(nullif("displayName", ''), "emailAddress") AS sender FROM "EmailParticipant"
+      WHERE "messageId" = m."id" AND type = 'FROM' ORDER BY "id" LIMIT 1) p ON true
+    WHERE (${filters.status} = 'ALL' OR l."workflowStatus" = ${filters.status})
+    ORDER BY l."createdAt" DESC, l."id" DESC LIMIT ${page.take} OFFSET ${page.skip}`);
+  const selectedId = filters.selected ?? items[0]?.id;
+  const thread = selectedId ? await db.emailThread.findFirst({
+    where: { id: selectedId, messages: { some: { direction: "INBOUND" } } },
     include: {
       messages: {
-        orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }],
+        orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }, { id: "asc" }],
         include: { participants: true, attachments: true },
       },
       classifications: {
@@ -100,36 +106,10 @@ export async function getMockInboxQueue(
         },
       },
     },
-  });
+  }) : null;
+  const selected = thread ? { ...thread, messages: thread.messages, classification: thread.classifications[0] ?? null } : null;
+  return { items, selected, counts, pagination: page };
 
-  const allItems = threads.map((thread) => {
-    let latestInbound = thread.messages[0];
-    for (const message of thread.messages) {
-      if (message.direction === "INBOUND") latestInbound = message;
-    }
-    const classification = thread.classifications[0] ?? null;
-    const workflowStatus = !classification
-      ? "UNPROCESSED"
-      : ["SIMULATED_SENT", "SIMULATED_FORWARDED", "NO_ACTION"].includes(
-          classification.processingStatus ?? "",
-        )
-        ? "COMPLETED"
-        : "NEEDS_ACTION";
-    return { ...thread, latestInbound, classification, workflowStatus };
-  });
-
-  const counts = {
-    ALL: allItems.length,
-    UNPROCESSED: allItems.filter((item) => item.workflowStatus === "UNPROCESSED").length,
-    NEEDS_ACTION: allItems.filter((item) => item.workflowStatus === "NEEDS_ACTION").length,
-    COMPLETED: allItems.filter((item) => item.workflowStatus === "COMPLETED").length,
-  };
-  const items = filters.status === "ALL"
-    ? allItems
-    : allItems.filter((item) => item.workflowStatus === filters.status);
-  const selected = selectInboxItem(items, filters.selected);
-
-  return { items, selected, counts };
 }
 
 export function selectInboxItem<T extends { id: string }>(

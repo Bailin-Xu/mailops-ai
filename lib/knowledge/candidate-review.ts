@@ -17,7 +17,7 @@ export function candidateStatusLabel(status: CandidateStatus) {
   return {
     DRAFT: "Draft",
     PENDING_REVIEW: "Pending review",
-    APPROVED: "Active knowledge",
+    APPROVED: "Approved candidate",
     REJECTED: "Rejected",
   }[status];
 }

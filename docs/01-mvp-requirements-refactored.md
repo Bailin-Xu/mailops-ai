@@ -653,15 +653,18 @@ The target review lifecycle shall support:
 
 The user shall be able to approve, reject, or regenerate a draft.
 
-**Implementation baseline (2026-10-27):** persisted draft states currently are
-`GENERATED`, `SUPERSEDED`, and `SIMULATED_SENT`. Generation failures are recorded
-in AI executions and classification processing status. Editing is currently an
-unsaved form operation until final confirmation; approval and simulated sending
-are combined as specified by FR-080. Independent saved edits, approval, and
-rejection are target capabilities, not completed behavior. Phases 1 and 4 of the
-[implementation plan](09-code-inventory-and-career-implementation-plan.md) will
-define and implement the minimal consistent lifecycle. Phase 0 changes no review
-or sending policy.
+**Phase 4 implementation (2026-10-28):** the minimal consistent lifecycle persists
+`GENERATED`, `SUPERSEDED`, `REJECTED` and `SIMULATED_SENT`. Independent human edits
+are stored separately from the AI original and displayed as an `EDITED` substate
+of `GENERATED`; they survive refresh without approving or sending. Generation
+failures remain AI-execution/processing records. Rejection blocks confirmation and
+permits a newly generated reply to be reviewed. Review revision tokens reject
+competing saves or stale final confirmation. Knowledge/context validity checks
+still apply to saved drafts, and an in-flight AI result cannot overwrite a later
+human save. Approval and simulated sending stay combined as required by FR-080;
+a separate persisted `APPROVED` queue is not part of this minimal implementation.
+See the [Phase 4 contract](14-phase-4-full-stack-review.md) for the explicit
+reconciliation of the target names above and the implemented lifecycle.
 
 ### FR-077 — Preserve final text
 

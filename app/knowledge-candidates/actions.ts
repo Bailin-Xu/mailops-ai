@@ -13,6 +13,8 @@ import { WorkflowConflictError } from "@/lib/workflow/transaction";
 type CandidateActionState = {
   status: "idle" | "success" | "error";
   message: string;
+  conflict?: boolean;
+  revision?: number;
 };
 
 export async function reviewCandidateAction(
@@ -32,8 +34,12 @@ export async function reviewCandidateAction(
       note: formData.get("note"),
     });
     revalidatePath("/knowledge-candidates");
+    revalidatePath("/knowledge/[id]", "page");
+    revalidatePath("/inbox");
+    revalidatePath("/knowledge-search");
     return {
       status: "success",
+      revision: result.revision,
       message:
         result.status === "APPROVED"
           ? "Candidate approved. Its knowledge entry is now active."
@@ -42,6 +48,7 @@ export async function reviewCandidateAction(
   } catch (error) {
     return {
       status: "error",
+      conflict: error instanceof WorkflowConflictError,
       message:
         error instanceof ZodError
           ? (error.issues[0]?.message ?? "Check the reviewed content.")
@@ -61,6 +68,9 @@ export async function bulkApproveCandidatesAction(
       confirmed: formData.get("confirmed"),
     });
     revalidatePath("/knowledge-candidates");
+    revalidatePath("/knowledge/[id]", "page");
+    revalidatePath("/inbox");
+    revalidatePath("/knowledge-search");
     return {
       status: "success",
       message:
@@ -71,6 +81,7 @@ export async function bulkApproveCandidatesAction(
   } catch (error) {
     return {
       status: "error",
+      conflict: error instanceof WorkflowConflictError,
       message:
         error instanceof ZodError
           ? (error.issues[0]?.message ?? "Confirm the bulk approval first.")
@@ -98,6 +109,9 @@ export async function splitCandidateAction(
       segments,
     });
     revalidatePath("/knowledge-candidates");
+    revalidatePath("/knowledge/[id]", "page");
+    revalidatePath("/inbox");
+    revalidatePath("/knowledge-search");
     return {
       status: "success",
       message: `${result.created} child candidates created for separate review.`,
@@ -105,6 +119,7 @@ export async function splitCandidateAction(
   } catch (error) {
     return {
       status: "error",
+      conflict: error instanceof WorkflowConflictError,
       message:
         error instanceof ZodError
           ? (error.issues[0]?.message ?? "Check every split question and answer.")

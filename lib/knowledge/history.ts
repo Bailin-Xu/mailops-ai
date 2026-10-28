@@ -1,13 +1,23 @@
 import { z } from "zod";
+import { pagination } from "@/lib/ui/pagination";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
 import { draftInputSnapshotSchema } from "@/lib/processing/evidence";
 
-export async function getKnowledgeHistory(entryId: unknown, db: PrismaClient = getDb()) {
-  return db.knowledgeEntry.findUnique({
-    where: { id: z.string().uuid().parse(entryId) },
-    include: { currentRevision: true, revisions: { orderBy: { version: "desc" }, include: { reviewEvent: true } } },
+export async function getKnowledgeHistory(entryId: unknown, db: PrismaClient = getDb(), requestedPage = 1) {
+  const id = z.string().uuid().parse(entryId);
+  const page = pagination(await db.knowledgeRevision.count({ where: { knowledgeEntryId: id } }), requestedPage);
+  const entry = await db.knowledgeEntry.findUnique({
+    where: { id },
+    include: { sourceCandidate: true, currentRevision: true, revisions: { orderBy: { version: "desc" },
+      take: page.take, skip: page.skip, include: { reviewEvent: true } } },
   });
+  return entry ? { ...entry, pagination: page } : null;
+}
+
+export async function getComparisonRevision(entryId: string, revisionId: unknown, db: PrismaClient = getDb()) {
+  const parsed = z.string().uuid().safeParse(revisionId);
+  return parsed.success ? db.knowledgeRevision.findFirst({ where: { id: parsed.data, knowledgeEntryId: entryId } }) : null;
 }
 
 export async function getDraftEvidence(draftId: unknown, db: PrismaClient = getDb()) {
@@ -50,7 +60,7 @@ export async function getAffectedDrafts(input: unknown = {}, db: PrismaClient = 
     ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
     select: { id: true, threadId: true, classificationId: true, subject: true, evidenceStatus: true,
       knowledgeReviewRequiredAt: true, knowledgeReviewReason: true,
-      knowledgeSources: { select: { knowledgeEntryId: true, knowledgeRevisionId: true } },
+      knowledgeSources: { select: { knowledgeEntryId: true, knowledgeRevisionId: true, knowledgeRevision: { select: { version: true } } } },
     },
   });
   const page = items.slice(0, query.limit);

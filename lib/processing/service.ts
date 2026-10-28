@@ -1,4 +1,4 @@
-import type { ClassificationCategory, PrismaClient } from "@/generated/prisma/client";
+import type { ClassificationCategory, Prisma, PrismaClient } from "@/generated/prisma/client";
 import { draftResultSchema, type AIExecutionMetadata, type AIProvider } from "@/lib/ai/provider";
 import { reviewClassification } from "@/lib/classification/service";
 import { getDb } from "@/lib/db";
@@ -18,6 +18,7 @@ const manualAnswerSchema = z.object({
 });
 const confirmedDraftSchema = z.object({
   draftId: z.string().uuid(),
+  expectedReviewRevision: revisionSchema.default(0),
   subject: z.string().trim().min(1).max(500),
   body: z.string().trim().min(1).max(20_000),
   language: z.enum(["en", "fr", "mixed", "unknown"]),
@@ -28,7 +29,12 @@ class DraftValidationError extends Error {
 }
 
 export async function runAutomaticProcessing(classificationIdInput: unknown, provider: AIProvider, db: PrismaClient = getDb()) {
-  const context = await loadClassificationContext(idSchema.parse(classificationIdInput), db);
+  const { context, reviewToken } = await workflowTransaction(db, async (transaction) => {
+    const context = await loadClassificationContext(idSchema.parse(classificationIdInput), transaction);
+    const reviewToken = await transaction.draft.findFirst({ where: { classificationId: context.id, status: "GENERATED" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { id: true, reviewRevision: true } });
+    return { context, reviewToken };
+  });
   if (isTerminalProcessing(context.processingStatus)) throw new WorkflowConflictError();
   const classificationId = context.id;
   const category = effectiveCategory(context);
@@ -89,6 +95,10 @@ export async function runAutomaticProcessing(classificationIdInput: unknown, pro
     }
     return await workflowTransaction(db, async (transaction) => {
       await assertCurrentContext(context, transaction);
+      if (reviewToken) {
+        const currentReview = await transaction.draft.findUnique({ where: { id: reviewToken.id }, select: { reviewRevision: true } });
+        if (!currentReview || currentReview.reviewRevision !== reviewToken.reviewRevision) throw new WorkflowConflictError();
+      }
       const currentKnowledge = await transaction.knowledgeEntry.findUnique({ where: { id: knowledge.id } });
       if (!currentKnowledge || currentKnowledge.status !== "ACTIVE" || knowledgeFingerprint(currentKnowledge) !== fingerprint
         || currentKnowledge.currentRevisionId !== knowledgeRevision.id || !sameKnowledgeFacts(currentKnowledge, knowledgeRevision)) {
@@ -154,31 +164,59 @@ export async function confirmAndSimulateSend(input: unknown, db: PrismaClient = 
   const approved = confirmedDraftSchema.parse(input);
   const now = new Date();
   return workflowTransaction(db, async (transaction) => {
-    const draft = await transaction.draft.findUnique({
-      where: { id: approved.draftId }, include: { knowledgeSources: { include: { knowledgeEntry: true, knowledgeRevision: true } } },
-    });
-    if (!draft || draft.status !== "GENERATED") throw new Error("This reference reply is no longer ready to send.");
-    const context = await loadClassificationContext(draft.classificationId, transaction);
-    const snapshot = draftInputSnapshotSchema.safeParse(draft.inputSnapshot);
-    if (context.processingStatus !== "DRAFT_READY" || draft.classificationRevision !== context.revision
-      || draft.evidenceStatus !== "CAPTURED" || draft.knowledgeReviewRequiredAt !== null
-      || !snapshot.success || snapshot.data.kind !== "GROUNDED"
-      || snapshot.data.sourceContextHash !== context.sourceContextHash
-      || snapshot.data.classificationRevisionAtStart + 1 !== draft.classificationRevision
-      || snapshot.data.factualGrounding.revisionIds.length !== draft.knowledgeSources.length
-      || draft.knowledgeSources.some((source) => !snapshot.data.factualGrounding.revisionIds.includes(source.knowledgeRevisionId ?? ""))
-      || !validGrounding(draft.knowledgeSources)) throw new WorkflowConflictError();
+    const { draft, context } = await loadReviewableDraft(approved.draftId, approved.expectedReviewRevision, transaction);
     await transaction.classification.update({
       where: { id: context.id, revision: context.revision },
       data: { processingStatus: "SIMULATED_SENT", revision: { increment: 1 } },
     });
     const result = await transaction.draft.update({
-      where: { id: approved.draftId, status: "GENERATED" },
-      data: { status: "SIMULATED_SENT", approvedSubject: approved.subject, approvedBody: approved.body,
+      where: { id: approved.draftId, status: "GENERATED", reviewRevision: approved.expectedReviewRevision },
+      data: { status: "SIMULATED_SENT", reviewRevision: { increment: 1 }, approvedSubject: approved.subject, approvedBody: approved.body,
         approvedLanguage: approved.language, approvedAt: now, simulatedSentAt: now },
     });
     await transaction.emailThread.update({ where: { id: draft.threadId }, data: { status: "SIMULATED_SENT" } });
     return result;
+  });
+}
+
+async function loadReviewableDraft(draftId: string, expectedReviewRevision: number, transaction: Prisma.TransactionClient, groundingRequired = true) {
+  const draft = await transaction.draft.findUnique({
+    where: { id: draftId }, include: { knowledgeSources: { include: { knowledgeEntry: true, knowledgeRevision: true } } },
+  });
+  if (!draft || draft.status !== "GENERATED") throw new Error("This reference reply is no longer ready to send.");
+  const context = await loadClassificationContext(draft.classificationId, transaction);
+  const snapshot = draftInputSnapshotSchema.safeParse(draft.inputSnapshot);
+  if (context.processingStatus !== "DRAFT_READY" || draft.classificationRevision !== context.revision
+    || draft.reviewRevision !== expectedReviewRevision) throw new WorkflowConflictError();
+  if (groundingRequired && (draft.evidenceStatus !== "CAPTURED" || draft.knowledgeReviewRequiredAt !== null
+      || !snapshot.success || snapshot.data.kind !== "GROUNDED"
+      || snapshot.data.sourceContextHash !== context.sourceContextHash
+      || snapshot.data.classificationRevisionAtStart + 1 !== draft.classificationRevision
+      || snapshot.data.factualGrounding.revisionIds.length !== draft.knowledgeSources.length
+      || draft.knowledgeSources.some((source) => !snapshot.data.factualGrounding.revisionIds.includes(source.knowledgeRevisionId ?? ""))
+      || !validGrounding(draft.knowledgeSources))) throw new WorkflowConflictError();
+  return { draft, context };
+}
+
+export async function saveDraftEdits(input: unknown, db: PrismaClient = getDb()) {
+  const reviewed = confirmedDraftSchema.parse(input);
+  return workflowTransaction(db, async (transaction) => {
+    await loadReviewableDraft(reviewed.draftId, reviewed.expectedReviewRevision, transaction);
+    return transaction.draft.update({ where: { id: reviewed.draftId, status: "GENERATED", reviewRevision: reviewed.expectedReviewRevision },
+      data: { editedSubject: reviewed.subject, editedBody: reviewed.body, editedLanguage: reviewed.language,
+        editedAt: new Date(), reviewRevision: { increment: 1 } } });
+  });
+}
+
+export async function rejectDraft(input: unknown, db: PrismaClient = getDb()) {
+  const reviewed = z.object({ draftId: idSchema, expectedReviewRevision: revisionSchema.default(0), note: z.string().trim().max(1000).default("") }).parse(input);
+  return workflowTransaction(db, async (transaction) => {
+    const { context } = await loadReviewableDraft(reviewed.draftId, reviewed.expectedReviewRevision, transaction, false);
+    await transaction.classification.update({ where: { id: context.id, revision: context.revision },
+      data: { processingStatus: "DRAFT_REJECTED", revision: { increment: 1 }, routingReason: "A human rejected this reference reply. Regenerate before confirming another reply." } });
+    await transaction.emailThread.update({ where: { id: context.threadId }, data: { status: "DRAFT_REJECTED" } });
+    return transaction.draft.update({ where: { id: reviewed.draftId, status: "GENERATED", reviewRevision: reviewed.expectedReviewRevision },
+      data: { status: "REJECTED", rejectedAt: new Date(), reviewNote: reviewed.note || null, reviewRevision: { increment: 1 } } });
   });
 }
 

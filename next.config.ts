@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  distDir: process.env.MAILOPS_E2E_FAULTS === "true" ? ".next-e2e" : ".next",
 };
 
 export default nextConfig;

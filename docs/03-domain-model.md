@@ -439,6 +439,9 @@ Represents one generated or manually edited reply draft.
 - `approvedLanguage`
 - `approvedAt`
 - `simulatedSentAt`
+- `reviewRevision` (conditional human-review writes)
+- `editedSubject`, `editedBody`, `editedLanguage`, `editedAt` (separate saved human edits)
+- `rejectedAt`, `reviewNote`
 - `classificationRevision`
 - `evidenceStatus` (`LEGACY_UNVERIFIED`, `CAPTURED`, `HUMAN_AUTHORED`)
 - `inputSnapshot` (immutable validated generation or human-answer input)
@@ -450,12 +453,18 @@ Represents one generated or manually edited reply draft.
 ### Status
 
 - `GENERATED`
+- `REJECTED`
 - `SUPERSEDED`
 - `SIMULATED_SENT`
 
+`EDITED` is a visible saved substate of `GENERATED`, identified by `editedAt`;
+confirmation remains a separate explicit human action. Rejection sets classification
+processing status `DRAFT_REJECTED` and permits regeneration. See the
+[review lifecycle](14-phase-4-full-stack-review.md).
+
 ### Responsibilities
 
-- stores a grounded Mock-provider reference reply or a human-authored reply;
+- stores a grounded provider reference reply or a human-authored reply;
 - preserves the exact approved version;
 - records simulated-send completion.
 - preserves immutable input evidence separately from final human text;

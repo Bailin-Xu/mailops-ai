@@ -2,7 +2,7 @@
 
 Assessment date: **2026-10-27**.
 
-Status: **Phases 0–3 complete (Phase 3: 2026-10-28); Phases 4–5 not started.**
+Status: **Phases 0–4 complete (Phase 4: 2026-10-28); Phase 5 not started.**
 
 ## 1. Purpose and Scope
 
@@ -172,7 +172,7 @@ dependencies. Shared work, such as pagination, should be implemented once.
 | 1 | Correct state transitions and safe replacement | Phase 0 | Complete; evidence in Section 9 |
 | 2 | Versioned knowledge and immutable evidence | Phase 1 | Complete; evidence in Section 10 |
 | 3 | AI evaluation demonstration | Phase 2 | Complete; evidence in Section 11 |
-| 4 | Full-stack revision workflow demonstration | Phase 2 | Not started |
+| 4 | Full-stack revision workflow demonstration | Phase 2 | Complete; evidence in Section 12 |
 | 5 | Backend reconstruction and scale demonstration | Phase 2 | Not started |
 
 ### Phase 0 — Reproducible Baseline
@@ -306,15 +306,15 @@ and a reproducible baseline comparison. Vector search and agent tools remain def
 
 **Tasks**
 
-- [ ] P4-T1: Build revision comparison/history and affected-draft views using Phase
+- [x] P4-T1: Build revision comparison/history and affected-draft views using Phase
   2 services; display AI suggestions separately from human decisions.
-- [ ] P4-T2: Complete agreed save/reject/re-review interactions with revision-aware
+- [x] P4-T2: Complete agreed save/reject/re-review interactions with revision-aware
   submissions, retained unsaved input, and clear conflict resolution.
-- [ ] P4-T3: Paginate inbox/candidate lists, fetch selected details independently,
+- [x] P4-T3: Paginate inbox/candidate lists, fetch selected details independently,
   and preserve filters, selection, and navigation in URL state where appropriate.
-- [ ] P4-T4: Add consistent loading, empty, success, and recoverable error states;
+- [x] P4-T4: Add consistent loading, empty, success, and recoverable error states;
   verify keyboard access and readable English UI with French email content.
-- [ ] P4-T5: Add Playwright tests with Mock AI and isolated synthetic database data.
+- [x] P4-T5: Add Playwright tests with Mock AI and isolated synthetic database data.
 
 **Acceptance criteria**
 
@@ -395,8 +395,8 @@ Use the following evidence fields when closing a phase:
 | Limitations | Known risks, unverified behavior, and scope exclusions |
 | Next step | Eligible phase or explicitly scoped follow-up |
 
-**Next planned implementation step: choose Phase 4 or Phase 5 specialization.**
-The shared Phase 0–2 foundation and Phase 3 evaluation are complete; Phases 4–5 remain unstarted.
+**Next planned implementation step: Phase 5 backend reconstruction/scale.**
+Phases 0–4 are complete; Phase 5 remains unstarted and requires a separate implementation task.
 
 ## 8. Phase 0 Closure — 2026-10-27
 
@@ -523,3 +523,34 @@ All P3-T1–T6 tasks and P3-A1–A5 tooling criteria are complete. See the
 
 The next authorized task can target Phase 4 (full-stack review workflow) or Phase 5
 (backend reconstruction/scale). Neither phase was implemented here.
+
+
+## 12. Phase 4 Closure — 2026-10-28
+
+All P4-T1–T5 tasks and P4-A1–A5 criteria are complete. See the
+[full-stack review guide and demonstration](14-phase-4-full-stack-review.md).
+
+- Knowledge history/comparison and affected-draft views reuse Phase 2 services,
+  scope evidence to its owning entry and link back to original candidate sources.
+- Controlled knowledge proposals survive failed/stale submissions. Latest values
+  and proposed values are compared before an explicit rebase/replace and re-review.
+- Inbox and candidate list queries now fetch bounded database-side pages and load
+  selected details independently. Page/filter/selection state survives URL navigation;
+  missing selections never silently operate on another record.
+- The minimal FR-076/FR-080 lifecycle now supports independent saved human edits,
+  explicit rejection and re-generation, with original AI text/evidence preserved.
+  Conditional draft review tokens prevent stale saves/confirmation and protect
+  human saves against already in-flight regeneration. Approval still explicitly
+  confirms a simulated send; no real delivery or separate approval queue was added.
+- Loading, empty, success, error/conflict states, keyboard focus and mobile layouts
+  were checked. French text is preserved; no untrusted HTML/remote images are rendered.
+- `npm run check` passed: lint, types, **125 offline tests / 30 files**, production
+  build. **82 integration tests / 19 files** and **6 Playwright browser scenarios**
+  passed; isolation sentinel unchanged. Migration/schema diff shows no difference.
+- One additive draft-review migration was applied to the isolated database and
+  guarded local development database; historical data preservation is tested.
+  Added Playwright and CI wiring; no remote CI or live AI run is claimed.
+
+Count queries/offset pagination and the complete selected-thread timeline are not
+large-corpus performance optimizations. Phase 5 remains the next optional backend
+specialization; no reconstruction or scale benchmark was implemented in Phase 4.

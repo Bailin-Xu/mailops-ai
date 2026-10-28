@@ -6,6 +6,8 @@ import { getConfiguredAIProvider } from "@/lib/ai/provider-factory";
 import { WorkflowConflictError } from "@/lib/workflow/transaction";
 import {
   confirmAndSimulateSend,
+  saveDraftEdits,
+  rejectDraft,
   correctAndResumeProcessing,
   runAutomaticProcessing,
   runThreadAutomation,
@@ -17,6 +19,7 @@ export type InboxActionState = {
   status: "idle" | "success" | "error";
   message: string;
   completedAt: number;
+  reviewRevision?: number;
 };
 
 const provider = getConfiguredAIProvider();
@@ -75,6 +78,7 @@ export async function confirmSimulatedSendAction(
   try {
     await confirmAndSimulateSend({
       draftId: formData.get("draftId"),
+      expectedReviewRevision: formData.get("expectedReviewRevision") ?? undefined,
       subject: formData.get("subject"),
       body: formData.get("body"),
       language: formData.get("language"),
@@ -138,4 +142,25 @@ function safeMessage(error: unknown, fallback: string) {
     "Draft generation",
   ];
   return allowed.some((fragment) => error.message.includes(fragment)) ? error.message : fallback;
+}
+
+export async function saveDraftAction(_previous: InboxActionState, form: FormData): Promise<InboxActionState> {
+  try {
+    const saved = await saveDraftEdits({ draftId: form.get("draftId"), expectedReviewRevision: form.get("expectedReviewRevision"),
+      subject: form.get("subject"), body: form.get("body"), language: form.get("language") });
+    revalidatePath("/inbox");
+    return { ...actionResult("success", "Human edits saved. No approval or sending occurred."), reviewRevision: saved.reviewRevision };
+  } catch (error) {
+    return actionResult("error", safeMessage(error, "Edits could not be saved. Your proposed text is kept."));
+  }
+}
+
+export async function rejectDraftAction(_previous: InboxActionState, form: FormData): Promise<InboxActionState> {
+  try {
+    await rejectDraft({ draftId: form.get("draftId"), expectedReviewRevision: form.get("expectedReviewRevision"), note: form.get("note") ?? "" });
+    revalidatePath("/inbox"); revalidatePath("/knowledge/[id]", "page");
+    return actionResult("success", "Reply rejected. Regenerate and review a new reply before confirmation.");
+  } catch (error) {
+    return actionResult("error", safeMessage(error, "Rejection could not be saved. Reload the latest reply and retry."));
+  }
 }

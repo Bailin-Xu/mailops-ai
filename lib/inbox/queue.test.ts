@@ -8,6 +8,7 @@ describe("mock inbox filters", () => {
       status: "ALL",
       selected: undefined,
       q: "Artsy",
+      page: 1,
     });
   });
 

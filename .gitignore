@@ -49,3 +49,8 @@ next-env.d.ts
 
 # Local synthetic AI evaluation artifacts (opt-in live outputs included)
 /data/evaluation-runs/
+
+# Browser test artifacts
+/test-results/
+/playwright-report/
+/.next-e2e/

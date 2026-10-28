@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import {
   confirmSimulatedSendAction,
+  saveDraftAction,
+  rejectDraftAction,
   reviewClassificationAction,
   retryProcessingAction,
   runClassificationAction,
@@ -11,6 +13,8 @@ import {
   submitManualAnswerAction,
   type InboxActionState,
 } from "@/app/inbox/actions";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { classificationCategoryValues } from "@/lib/ai/provider";
 
 const initialState: InboxActionState = { status: "idle", message: "", completedAt: 0 };
@@ -46,7 +50,9 @@ type ClassificationView = {
     language: string;
     style: string;
     mode: "MOCK_GROUNDED" | "AI_GROUNDED" | "MANUAL";
-    status: "GENERATED" | "SUPERSEDED" | "SIMULATED_SENT";
+    status: "GENERATED" | "SUPERSEDED" | "SIMULATED_SENT" | "REJECTED";
+    reviewRevision: number; editedSubject: string | null; editedBody: string | null; editedLanguage: string | null;
+    editedAt: Date | null; rejectedAt: Date | null; reviewNote: string | null;
     approvedSubject: string | null;
     approvedBody: string | null;
     approvedLanguage: string | null;
@@ -172,7 +178,7 @@ export function ClassificationPanel({
             </div>
           )}
 
-          {classification.processingStatus === "FAILED" || classification.processingStatus === "DRAFT_READY" || !classification.processingStatus ? (
+          {classification.processingStatus === "DRAFT_REJECTED" || classification.processingStatus === "FAILED" || classification.processingStatus === "DRAFT_READY" || !classification.processingStatus ? (
             <form action={retryAction} className="inbox-route-action">
               <input name="classificationId" type="hidden" value={classification.id} />
               <div><span>Reference reply preparation</span><p>{classification.processingStatus === "DRAFT_READY" ? "A replacement becomes available only after it succeeds. Failed attempts preserve the previous reply." : "Retry processing for the current classification."}</p></div>
@@ -182,7 +188,7 @@ export function ClassificationPanel({
 
           {draft?.mode === "MOCK_GROUNDED" || draft?.mode === "AI_GROUNDED" ? (
             <section className="inbox-grounded-draft">
-              <header><div><span>Dorian style / reference only</span><h4>{draft.approvedSubject ?? draft.subject}</h4></div><strong>{draft.status.replaceAll("_", " ")}</strong></header>
+              <header><div><span>Dorian style / reference only</span><h4>{draft.approvedSubject ?? draft.subject}</h4></div><strong>{draft.editedAt && draft.status === "GENERATED" ? "EDITED — awaiting human confirmation" : draft.status.replaceAll("_", " ")}</strong></header>
               <div className="inbox-grounding-evidence">
                 <p><b>Retrieval query</b>{classification.knowledgeQuery}</p>
                 <p><b>Grounding sources</b>{classification.knowledgeMatchCount}</p>
@@ -190,7 +196,7 @@ export function ClassificationPanel({
                   <article key={knowledgeEntry.id}>
                     {knowledgeRevision ? <>
                       <span>#{rank} · Version {knowledgeRevision.version} · {knowledgeRevision.language.toUpperCase()} · score {relevanceScore.toFixed(2)}</span>
-                      <strong>{knowledgeRevision.title}</strong>
+                      <Link href={`/knowledge/${knowledgeEntry.id}`}><strong>{knowledgeRevision.title}</strong> · Review knowledge history</Link>
                       <p>{knowledgeRevision.canonicalQuestion}</p>
                       <p>{knowledgeRevision.answer}</p>
                     </> : <><strong>Legacy source link</strong><p>The historical source text was not captured. Current knowledge is not evidence of what this reply originally used.</p></>}
@@ -204,22 +210,17 @@ export function ClassificationPanel({
                     <summary>View original AI draft</summary>
                     <pre lang={draft.language}>{draft.body}</pre>
                   </details>
-                  <form action={sendAction} className="inbox-draft-review">
-                  <input name="draftId" type="hidden" value={draft.id} />
-                    <div><span>Human review</span><strong>Edit the final reply before confirmation</strong><p>The AI original remains unchanged for audit.</p></div>
-                    <label><span>Subject</span><input defaultValue={draft.subject} disabled={sending} maxLength={500} name="subject" required /></label>
-                    <label><span>Reply language</span><select defaultValue={draft.language} disabled={sending} name="language"><option value="fr">French</option><option value="en">English</option><option value="mixed">Mixed</option><option value="unknown">Unknown</option></select></label>
-                    <label><span>Final reply</span><textarea defaultValue={draft.body} disabled={sending} maxLength={20_000} name="body" required rows={9} /></label>
-                    <button disabled={sending} type="submit">{sending ? "Confirming…" : "Approve final text & simulate send"}</button>
-                    <small>No mailbox is connected. This stores the human-approved final text and a simulated-send timestamp.</small>
-                  </form>
+                  <DraftConfirmationForm key={draft.id} draft={draft} action={sendAction} sending={sending} />
                 </>
               ) : draft.status === "GENERATED" ? (
                 <div className="inbox-original-draft">
                   <strong>Previous reference reply preserved</strong>
-                  <pre lang={draft.language}>{draft.body}</pre>
+                  <pre lang={draft.editedLanguage ?? draft.language}>{draft.editedBody ?? draft.body}</pre>
                   <p>Retry processing before confirming this reply. Its context or grounding needs to be checked again.</p>
+                  {classification.processingStatus === "DRAFT_READY" && <DraftRejectionForm draft={draft} />}
                 </div>
+              ) : draft.status === "REJECTED" ? (
+                <div className="inbox-original-draft"><strong>Human rejected this reply</strong><pre lang={draft.language}>{draft.editedBody ?? draft.body}</pre><p>{draft.reviewNote ?? "Regenerate a new reply before confirmation."}</p></div>
               ) : (
                 <div className="inbox-approved-draft">
                   <span>Human-approved final reply · {(draft.approvedLanguage ?? draft.language).toUpperCase()}</span>
@@ -258,6 +259,48 @@ export function ClassificationPanel({
       )}
     </section>
   );
+}
+
+function DraftConfirmationForm({ draft, action, sending }: { draft: ClassificationView["drafts"][number]; action: (form: FormData) => void; sending: boolean }) {
+  const router = useRouter();
+  const [subject, setSubject] = useState(draft.editedSubject ?? draft.subject);
+  const [body, setBody] = useState(draft.editedBody ?? draft.body);
+  const [language, setLanguage] = useState(draft.editedLanguage ?? draft.language);
+  const [note, setNote] = useState("");
+  const [reviewRevision, setReviewRevision] = useState(draft.reviewRevision);
+  const [saveState, saveAction, saving] = useActionState(async (previous: InboxActionState, form: FormData) => {
+    const result = await saveDraftAction(previous, form);
+    if (result.status === "success" && result.reviewRevision !== undefined) setReviewRevision(result.reviewRevision);
+    return result;
+  }, initialState);
+  const [rejectState, rejectAction, rejecting] = useActionState(rejectDraftAction, initialState);
+  const busy = sending || saving || rejecting;
+  const changed = draft.reviewRevision > reviewRevision;
+  return <form action={action} className="inbox-draft-review">
+    <input name="draftId" type="hidden" value={draft.id} />
+    <input name="expectedReviewRevision" type="hidden" value={reviewRevision} />
+    <div><span>Human review</span><strong>Edit the final reply before confirmation</strong><p>The AI original remains unchanged for audit. Save edits independently or reject this reply.</p></div>
+    <label><span>Subject</span><input value={subject} onChange={(e) => setSubject(e.target.value)} disabled={busy} maxLength={500} name="subject" required /></label>
+    <label><span>Reply language</span><select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={busy} name="language"><option value="fr">French</option><option value="en">English</option><option value="mixed">Mixed</option><option value="unknown">Unknown</option></select></label>
+    <label><span>Final reply</span><textarea value={body} onChange={(e) => setBody(e.target.value)} disabled={busy} maxLength={20_000} name="body" required rows={9} /></label>
+    <label><span>Rejection note (optional)</span><textarea value={note} onChange={(e) => setNote(e.target.value)} disabled={busy} maxLength={1000} name="note" rows={2} /></label>
+    <button disabled={busy || changed} formAction={saveAction} type="submit">{saving ? "Saving edits…" : "Save human edits"}</button>
+    <button disabled={busy || changed} formAction={rejectAction} formNoValidate type="submit">Reject reference reply</button>
+    <button disabled={busy || changed} type="submit">{sending ? "Confirming…" : "Approve final text & simulate send"}</button>
+    <button disabled={busy} onClick={() => router.refresh()} type="button">Compare latest saved reply</button>
+    {changed && <div className="review-conflict" role="alert"><strong>Another reviewer saved this reply. Your proposed text is kept.</strong><pre>{draft.editedBody ?? draft.body}</pre><button onClick={() => setReviewRevision(draft.reviewRevision)} type="button">Keep my final text against latest review</button></div>}
+    <p role={saveState.status === "error" || rejectState.status === "error" ? "alert" : "status"}>{saving || rejecting ? "Saving review…" : saveState.completedAt > rejectState.completedAt ? saveState.message : rejectState.message}</p>
+    <small>{draft.editedAt ? "Saved human edit is available after refresh. " : ""}No mailbox is connected. Confirmation stores final text and a simulated-send timestamp.</small>
+  </form>;
+}
+
+function DraftRejectionForm({ draft }: { draft: ClassificationView["drafts"][number] }) {
+  const [state, action, pending] = useActionState(rejectDraftAction, initialState);
+  const [note, setNote] = useState("");
+  const [revision] = useState(draft.reviewRevision);
+  return <form action={action}><input name="draftId" type="hidden" value={draft.id} /><input name="expectedReviewRevision" type="hidden" value={revision} />
+    <label>Rejection note<textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} disabled={pending} /></label>
+    <button type="submit" disabled={pending}>Reject outdated reference reply</button><p role={state.status === "error" ? "alert" : "status"}>{state.message}</p></form>;
 }
 
 function ClassificationCorrectionForm({
@@ -308,6 +351,7 @@ function processingOutcome(status: string | null) {
   if (status === "SIMULATED_SENT") return { tone: "success", title: "Simulated send complete", detail: "The human gate was confirmed. No real email was delivered." };
   if (status === "SIMULATED_FORWARDED") return { tone: "success", title: "Simulated technical handoff complete", detail: "Discord was not contacted." };
   if (status === "NO_ACTION") return { tone: "info", title: "No reply needed", detail: "Automatic routing determined that no response action should be created." };
+  if (status === "DRAFT_REJECTED") return { tone: "attention", title: "Human rejected the reference reply", detail: "The rejected text remains in history. Regenerate before another confirmation." };
   if (status === "FAILED") return { tone: "error", title: "Processing stopped safely", detail: "Use the retry action below after checking the provider configuration." };
   return null;
 }

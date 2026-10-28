@@ -167,7 +167,7 @@ records implemented capabilities, incomplete workflows, and planned additions fo
 AI application, full-stack, and backend portfolio directions. It defines tasks,
 dependencies, and acceptance criteria for six phases: complete the shared baseline,
 state correctness, and knowledge-version work first, then select a specialization.
-Phases 0–3 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
+Phases 0–4 are complete. The [state consistency guide](docs/11-phase-1-state-consistency-and-verification.md)
 documents stale-draft protection, safe replacement, review revision conflicts, and
 legacy-data behavior. Apply existing migrations with `npm run db:deploy` before
 using an updated checkout. The [knowledge/evidence guide](docs/12-phase-2-knowledge-evidence-and-verification.md)
@@ -181,8 +181,13 @@ with the isolated `TEST_DATABASE_URL`; the default is mock even if `.env` select
 Gemini. Live calls require explicit `--live`. Quality failures return exit 1; execution
 failures return exit 2. The synthetic/holdout commands now alias this isolated runner
 instead of importing into the Inbox. Recorded mock weaknesses remain visible.
-Next, select full-stack review workflows (Phase 4) or backend reconstruction and
-scale (Phase 5).
+The [full-stack review guide](docs/14-phase-4-full-stack-review.md) documents version
+comparison, affected replies, conflict-preserving review, paginated lists, independent
+human draft saves/rejection and a reproducible browser demonstration. Apply migrations
+and restart an existing development server before using the new draft review fields.
+For isolated browser checks, install Chromium with `npx playwright install chromium`,
+start the test database, then run `npm run test:e2e` with `TEST_DATABASE_URL`.
+Next is backend reconstruction and scale (Phase 5), which remains unstarted.
 Future integration designs do not represent completed functionality.
 
 The future Gmail, Discord, Artur-reference, delayed-send, concurrency, and privacy

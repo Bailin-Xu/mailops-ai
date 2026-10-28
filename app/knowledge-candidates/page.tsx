@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pagination } from "@/app/components/pagination";
 
 import { CandidateReviewForm } from "@/app/knowledge-candidates/candidate-review-form";
 import { CandidateSplitForm } from "@/app/knowledge-candidates/candidate-split-form";
@@ -76,10 +77,12 @@ export default async function KnowledgeCandidatesPage({ searchParams }: PageProp
               })}
             </div>
           ) : <div className="candidate-empty"><h2>No candidates match.</h2><p>Change the status, source, or search filter.</p></div>}
+          <Pagination {...data.pagination} href={(page) => candidateHref(filters, { page })} />
         </aside>
 
         {data.selected ? (
           <article className="candidate-detail">
+            {filters.selected && !data.items.some((item) => item.id === filters.selected) && <p className="review-selection-note" role="status">Selected candidate is shown independently of this list page and its filters.</p>}
             <header className="candidate-detail-heading">
               <div className="candidate-list-meta"><span className={`candidate-status status-${data.selected.status.toLowerCase()}`}>{candidateStatusLabel(data.selected.status)}</span><span>{data.selected.language.toUpperCase()}</span></div>
               <p>Selected candidate</p><h2>{data.selected.title}</h2><span>{data.selected.sources.length} traceable source{data.selected.sources.length === 1 ? "" : "s"}</span>
@@ -87,7 +90,7 @@ export default async function KnowledgeCandidatesPage({ searchParams }: PageProp
             <section className="candidate-proposal">
               <div><p>Proposed question</p><span>Untrusted until approved</span></div><h3>{data.selected.canonicalQuestion}</h3><p lang={data.selected.language}>{data.selected.proposedAnswer}</p>
             </section>
-            <CandidateReviewForm candidate={data.selected} key={`${data.selected.id}:${data.selected.revision}`} />
+            <CandidateReviewForm candidate={data.selected} key={data.selected.id} />
             {data.selected.status === "PENDING_REVIEW" ? (
               <CandidateSplitForm
                 candidateId={data.selected.id}
@@ -107,9 +110,9 @@ export default async function KnowledgeCandidatesPage({ searchParams }: PageProp
                 </article>
               ))}
             </section>
-            {data.selected.knowledgeEntry ? <div className="candidate-active-record"><span>Knowledge entry</span><strong>{data.selected.knowledgeEntry.status}</strong><p>Approved {data.selected.knowledgeEntry.approvedAt.toLocaleString("en-CA")}</p></div> : null}
+            {data.selected.knowledgeEntry ? <div className="candidate-active-record"><Link href={`/knowledge/${data.selected.knowledgeEntry.id}`}>Review versions &amp; affected drafts →</Link><span>Knowledge entry</span><strong>{data.selected.knowledgeEntry.status}</strong><p>Approved {data.selected.knowledgeEntry.approvedAt.toLocaleString("en-CA")}</p></div> : null}
           </article>
-        ) : <div className="candidate-empty candidate-detail-empty"><h2>Select a candidate.</h2><p>The proposal, editor, and source trail will appear here.</p></div>}
+        ) : <div className="candidate-empty candidate-detail-empty"><h2>{filters.selected ? "Selected candidate is unavailable." : "Select a candidate."}</h2><p>The proposal, editor, and source trail will appear here.</p></div>}
       </section>
     </main>
   );

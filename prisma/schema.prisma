@@ -151,6 +151,7 @@ enum ProcessingStatus {
   WAITING_FOR_REVIEW
   SEARCHING_KNOWLEDGE
   DRAFT_READY
+  DRAFT_REJECTED
   NO_KNOWLEDGE
   AWAITING_HUMAN_ANSWER
   TECHNICAL_QUEUED
@@ -377,6 +378,7 @@ model KnowledgeRevision {
 }
 
 enum DraftStatus {
+  REJECTED
   GENERATED
   SUPERSEDED
   SIMULATED_SENT
@@ -411,6 +413,13 @@ model Draft {
   approvedAt       DateTime?
   simulatedSentAt  DateTime?
   classificationRevision Int?
+  reviewRevision   Int           @default(0)
+  editedSubject    String?
+  editedBody       String?
+  editedLanguage   String?
+  editedAt         DateTime?
+  rejectedAt       DateTime?
+  reviewNote       String?
   evidenceStatus   DraftEvidenceStatus @default(LEGACY_UNVERIFIED)
   inputSnapshot    Json?
   knowledgeReviewRequiredAt DateTime?
