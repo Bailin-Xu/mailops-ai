@@ -33,5 +33,22 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
 
+  postgres-agent-a0:
+    image: postgres:17-alpine
+    profiles: ["agent-a0"]
+    environment:
+      POSTGRES_DB: mailops_agent_a0
+      POSTGRES_USER: mailops_agent_a0
+      POSTGRES_PASSWORD: mailops_agent_a0_local
+    ports:
+      - "127.0.0.1:5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mailops_agent_a0 -d mailops_agent_a0"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    tmpfs:
+      - /var/lib/postgresql/data
+
 volumes:
   mailops_postgres_data:

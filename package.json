@@ -34,7 +34,9 @@
     "ai:eval": "tsx scripts/run-ai-benchmark.ts",
     "test:e2e": "tsx scripts/run-browser-tests.ts",
     "eml:threads:reconstruct": "tsx scripts/reconstruct-threads.ts",
-    "bench:threads": "tsx scripts/benchmark-threads.ts"
+    "bench:threads": "tsx scripts/benchmark-threads.ts",
+    "agent:fixtures": "tsx scripts/agent/fixtures.ts",
+    "agent:contracts:python": "services/agent/.venv/bin/python services/agent/contracts.py"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

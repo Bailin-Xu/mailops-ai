@@ -10,6 +10,14 @@ The MVP imports `.eml` files, classifies English and French inquiries, allows hu
 
 Current phase: **MVP foundation and local development**.
 
+Portfolio phases 0–5 are complete. The next selected extension is documented in
+`docs/17-agent-development-implementation-plan.md` (A0 complete; A1–A5 not started).
+A0 contracts and synthetic fixtures are implemented. When explicitly asked to execute
+an A-stage, follow its scoped Python/FastAPI, LangGraph, MCP and evaluation/tracing
+work and acceptance criteria; do not interpret older roadmaps as permission to
+add Gmail, vector search, multi-agent workflows or cloud deployment. Existing
+business authority, privacy rules and human-approval boundaries still apply.
+
 Focus only on:
 
 - local Next.js development;

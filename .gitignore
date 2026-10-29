@@ -58,3 +58,9 @@ next-env.d.ts
 # Private local reconstruction plans and scale artifacts
 /data/thread-plans/
 /data/benchmarks/
+
+# Local Python environments and caches
+.venv/
+__pycache__/
+*.pyc
+/data/agent-runs/

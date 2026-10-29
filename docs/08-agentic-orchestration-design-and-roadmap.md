@@ -1,5 +1,13 @@
 # MailOps AI — Agentic Orchestration Design and Roadmap
 
+> **Planning update — 2026-10-28:** This is a long-term design, not implemented
+> capability. For the next extension, follow
+> [docs/17: Python Agent, MCP, and live evaluation](17-agent-development-implementation-plan.md),
+> stages A0–A5. That plan supersedes this document's immediate implementation order
+> and framework deferral in section 14. Its first deliverable is one bounded Agent;
+> multi-agent, Gmail, vector search and Azure remain deferred. The prior portfolio
+> phases 0–5 are complete; they did not implement this roadmap's phases 1–7.
+
 ## 1. Purpose
 
 This document defines how MailOps AI will evolve from an AI-assisted email
