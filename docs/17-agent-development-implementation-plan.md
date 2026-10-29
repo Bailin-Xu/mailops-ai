@@ -2,10 +2,11 @@
 
 Decision date: **2026-10-28**.
 
-Status: **A0 complete (2026-10-29); A1–A5 not started.** See
+Status: **A0–A1 complete (2026-10-29); A2–A5 not started.** See
 [the A0 closure](agent/a0-closure.md). A0 adds contracts, fixtures and checks; no
-Python execution service, LangGraph runtime, MCP integration, live evaluation result
-or tracing integration is claimed as implemented.
+Python execution service, LangGraph runtime, live evaluation result
+or tracing integration is claimed as implemented. MCP read tools and the Python
+client are implemented; see [A1 verification](agent/a1-mcp-tools-and-client.md).
 
 ## 1. Purpose, authority, and scope
 
@@ -157,14 +158,14 @@ admission state, not a duplicate graph engine.
 
 ## 4. Stage order and progress
 
-A0 is complete; A1–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
+A0–A1 are complete; A2–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
 order. Dataset/rubric and trace contracts begin in A0; instrumentation begins in A2,
 so evaluation and observability are not retrofitted after the Agent is built.
 
 | Stage | Deliverable | Depends on | Status |
 | --- | --- | --- | --- |
 | A0 | Architecture/contracts, isolated fixtures, preregistered evaluation protocol | Completed phases 0–5 | Complete — 2026-10-29 |
-| A1 | Real MCP server/client contract over current services | A0 | Not started |
+| A1 | Real MCP server/client contract over current services | A0 | Complete — 2026-10-29 |
 | A2 | Python/LangGraph bounded tool-using workflow and trace events | A1 | Not started |
 | A3 | Durable recovery, human pauses, concurrency and safe business commit | A2 | Not started |
 | A4 | Real-model baseline/Agent evaluation and tracing evidence | A3 | Not started |
@@ -390,8 +391,8 @@ Acceptance:
 
 ## 6. Immediate next task and later decisions
 
-A0 is complete. The next implementation request should execute **A1 only**:
-implement the MCP tools and Python client integration against isolated data. It must not simultaneously
+A0–A1 are complete. The next implementation request should execute **A2 only**:
+implement the bounded Python/LangGraph workflow and trace events over the MCP tools. It must not simultaneously
 build the entire graph, connect private email, run paid experiments or deploy services.
 
 Decisions resolved during A0: compatible dependency versions, exact ports/schema
@@ -414,3 +415,27 @@ boundaries. Neither change is authorized merely by appearing in an older roadmap
 
 Official APIs and dependency compatibility must be rechecked when implementing;
 links are design references, not a claim that new integrations have been verified.
+
+
+## 8. A1 closure — 2026-10-29
+
+A1-T1–T4 and A1-A1–A3 complete. See [A1 architecture, commands and limits](agent/a1-mcp-tools-and-client.md).
+
+- Official TS MCP SDK 1.32.2 and Python MCP 2.3.0 interoperated over real
+  Streamable HTTP: initialization, three-tool discovery, thread/search/revision
+  results and two independent client sessions, with credentials and scope enforced.
+- Reused existing PostgreSQL FTS query through the frozen-snapshot adapter and
+  shared context hashing. Family-scoped synthetic records only; no application
+  Inbox/knowledge bridge, private data, model calls or business writes in A1.
+- Added bounded strict tool/result schemas and Python validation. Tests cover
+  scope/expiry, invalid input, arbitrary/retired revisions, adversarial text,
+  output limits, timeout/abort and HTTP credential/Origin/Host/body rejection.
+- Final `npm run check` passed: lint, typecheck, **167 offline tests / 33 files**,
+  production build. Existing integration suite passed: **93 tests / 20 files**,
+  unchanged sentinel. A0 Python contract check: **31 cases passed**.
+- Real Python MCP integration passed, including malformed result rejection;
+  synthetic snapshot verified and cleaned after checks; disposable services stopped.
+- Initial protocol attempts exposed Python v2 stream/attribute API differences;
+  corrected against installed SDK and reran successfully. No claim of compatibility
+  with untested SDK versions, durable recovery or model prompt-injection resistance.
+- No UI changes, so browser tests not rerun. No Git commit or push.

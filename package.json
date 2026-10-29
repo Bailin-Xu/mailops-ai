@@ -36,9 +36,12 @@
     "eml:threads:reconstruct": "tsx scripts/reconstruct-threads.ts",
     "bench:threads": "tsx scripts/benchmark-threads.ts",
     "agent:fixtures": "tsx scripts/agent/fixtures.ts",
-    "agent:contracts:python": "services/agent/.venv/bin/python services/agent/contracts.py"
+    "agent:contracts:python": "services/agent/.venv/bin/python services/agent/contracts.py",
+    "agent:mcp:test": "tsx scripts/agent/test-mcp.ts",
+    "agent:mcp": "tsx services/mcp/start.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "html-to-text": "^10.0.0",
