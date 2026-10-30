@@ -69,3 +69,6 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+
+# Isolated mock Agent UI development cache
+/.next-agent-ui/

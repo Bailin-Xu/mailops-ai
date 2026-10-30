@@ -92,3 +92,15 @@ class GeminiModel:
         if call["name"] not in DECISIONS:
             raise ValueError("Forbidden decision")
         return {"value": {"name": call["name"], "arguments": call["args"]}, "usage": output.usage_metadata}
+
+
+class InteractiveMockModel(MockModel):
+    """Deterministic UI demo model; never calls a model API."""
+
+    id = "mock-ui-v1"
+
+    async def invoke(self, task: str, payload: dict[str, Any]) -> dict[str, Any]:
+        result = await super().invoke(task, payload)
+        if task == "decide" and not payload["observations"]:
+            result["value"]["arguments"]["query"] = payload["context"]["subject"][:500]
+        return result

@@ -3005,3 +3005,12 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .review-conflict pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .inbox-draft-review button[formaction] { border: 1px solid #096b60; }
 .review-selection-note { padding: 14px 22px; border-bottom: 1px solid #d5ddea; background: #f1f6ff; color: #334155; }
+
+.agent-review-panel { padding: 22px; border-block: 1px solid #dce3ee; background: #f6f8fc; }
+.agent-review-panel h2 { margin: 0 0 8px; font-size: 18px; }
+.agent-review-panel p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-suggestion, .agent-evidence { padding: 16px; margin-block: 12px; border: 1px solid #dce3ee; background: white; border-radius: 8px; }
+.agent-controls { display:flex; flex-wrap:wrap; gap:10px; }
+.agent-controls button { border:1px solid #8493ad; border-radius:6px; padding:9px 12px; background:white; color:#193357; cursor:pointer; }
+.agent-controls button:disabled { opacity:.5; cursor:wait; }
+.agent-review-panel [role="alert"] { color:#94351b; }

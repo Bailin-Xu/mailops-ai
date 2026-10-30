@@ -119,4 +119,9 @@ jobs:
       - run: npm run agent:workflow:test
       - run: npm run agent:durable:test
       - run: npm run agent:upgrade:test
+      - run: npm run agent:upgrade:test -- --preview
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- agent-review.spec.ts
+        env:
+          MAILOPS_E2E_AGENT: "true"
       - run: npm run agent:fixtures -- cleanup

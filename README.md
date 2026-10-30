@@ -211,3 +211,11 @@ architecture is documented in
 - Sending is simulated; no real mailbox provider is connected.
 - `SHADOW_MODE=true` and `EXTERNAL_DELIVERY_ENABLED=false` are the safe defaults;
   the database global kill switch independently defaults to the same state.
+
+## Experimental mock Agent review
+
+The opt-in Python/LangGraph + MCP review UI runs only against the isolated
+synthetic test database. See [A5 setup and review runbook](docs/agent/a5-mock-review-ui.md)
+for `npm run agent:ui:mock` (http://127.0.0.1:3115/inbox), pause/resume/cancel,
+immutable evidence and reproducible checks. The normal development app keeps
+Agent mode disabled. A4 real-model evaluation and human scoring remain pending.

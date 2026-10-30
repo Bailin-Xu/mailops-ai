@@ -679,6 +679,7 @@ model AgentAdmission {
   classificationId String @db.Uuid
   classification Classification @relation(fields: [classificationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
   context Json
+  preview Json?
   status String @default("READY")
   revision Int @default(0)
   fence Int @default(0)

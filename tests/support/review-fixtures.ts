@@ -1,6 +1,7 @@
+import { Client } from "pg";
 import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../../generated/prisma/client";
+import { Prisma, PrismaClient } from "../../generated/prisma/client";
 import { resolveTestDatabaseUrl } from "./database-target.mjs";
 import { saveCandidateReview } from "../../lib/knowledge/candidate-review";
 import { MockAIProvider } from "../../lib/ai/mock-provider";
@@ -41,12 +42,31 @@ export function syntheticFixtures() {
     const plan = await prepareThreadReconstruction(db); receipts.push(plan.id);
     return applyThreadReconstruction(plan, db);
   }
+  async function clearPreview({ threadId }: {threadId:string}) {
+    if (!threadIds.includes(threadId)) throw new Error("Only owned synthetic threads may be changed.");
+    await db.agentAdmission.updateMany({where:{classification:{threadId}},data:{preview:Prisma.DbNull}});
+  }
   async function cleanup() {
     await db.auditEvent.deleteMany({ where: { id: { in: receipts }, entityType: "ThreadReconstruction" } });
     const executions = await db.aIExecution.findMany({ where: { OR: [{ classification: { threadId: { in: threadIds } } }, { draft: { threadId: { in: threadIds } } }] }, select: { id: true } });
     // Failed draft executions have no relation; scope them using the fixture classification IDs.
     const classifications = await db.classification.findMany({ where: { threadId: { in: threadIds } }, select: { id: true } });
     for (const classification of classifications) await db.aIExecution.deleteMany({ where: { status: "FAILED", inputMetadata: { path: ["classificationId"], equals: classification.id } } });
+    const runs = await db.agentAdmission.findMany({where:{classification:{threadId:{in:threadIds}}},select:{id:true}});
+    if (process.env.MAILOPS_E2E_AGENT === "true" && runs.length) {
+      const checkpoint = new URL(process.env.AGENT_CHECKPOINT_DATABASE_URL ?? "");
+      if (checkpoint.protocol !== "postgresql:" || checkpoint.hostname !== "127.0.0.1" || checkpoint.port !== "5436"
+        || checkpoint.pathname !== "/mailops_agent_checkpoint" || checkpoint.username !== "mailops_agent_checkpoint" || checkpoint.search || checkpoint.hash) throw new Error("Isolated checkpoint database required for fixture cleanup.");
+      const client = new Client({connectionString:checkpoint.toString()});
+      await client.connect();
+      try {
+        await client.query("BEGIN");
+        // Only this fixture owner's UUIDs; never truncate shared checkpoints.
+        for (const table of ["checkpoint_writes", "checkpoint_blobs", "checkpoints"]) await client.query(`DELETE FROM ${table} WHERE thread_id = ANY($1::text[])`,[runs.map(r=>r.id)]);
+        await client.query("DELETE FROM agent_runtime_a3 WHERE run_id = ANY($1::uuid[])",[runs.map(r=>r.id)]);
+        await client.query("COMMIT");
+      } finally { await client.end(); }
+    }
     await db.agentCommitReceipt.deleteMany({where:{run:{classification:{threadId:{in:threadIds}}}}});
     await db.agentAdmission.deleteMany({where:{classification:{threadId:{in:threadIds}}}});
     await db.draftKnowledgeSource.deleteMany({ where: { draft: { threadId: { in: threadIds } } } });
@@ -63,5 +83,5 @@ export function syntheticFixtures() {
     await db.knowledgeCandidate.deleteMany({ where: { id: { in: candidateIds } } });
     await db.$disconnect();
   }
-  return { db, create, cleanup, reconstruct };
+  return { db, create, cleanup, reconstruct, clearPreview };
 }

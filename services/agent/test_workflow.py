@@ -303,3 +303,16 @@ def test_permanent_provider_failure_preserves_previous_reference(tmp_path, monke
 def test_wrong_language_evidence_rejected(tmp_path, monkeypatch):
     result, _, _ = run(tmp_path, monkeypatch, tools=Tools([{**SOURCE, "language": "en"}]))
     assert result["code"] == "UNTRUSTED_SOURCE" and result["proposal"] is None
+
+
+def test_ui_mock_uses_bounded_subject_without_changing_evaluation_model(tmp_path, monkeypatch):
+    from models import InteractiveMockModel
+
+    result, tools, _ = run(tmp_path, monkeypatch, InteractiveMockModel())
+    assert result["status"] == "WAITING_FOR_HUMAN"
+    assert tools.calls[1][1]["query"] == CONTEXT["subject"]
+    _, baseline, _ = run(tmp_path, monkeypatch)
+    assert baseline.calls[1][1]["query"] == "policy"
+    payload = {"context": {**CONTEXT, "subject": "é" * 700}, "observations": []}
+    decision = asyncio.run(InteractiveMockModel().invoke("decide", payload))
+    assert len(decision["value"]["arguments"]["query"]) == 500

@@ -1,0 +1,61 @@
+import { test,expect } from "@playwright/test";
+import { browserFixtures } from "./fixtures";
+test.skip(process.env.MAILOPS_E2E_AGENT!=="true","Requires explicit isolated mock Agent services");
+let fixtures:ReturnType<typeof browserFixtures>;
+test.beforeEach(()=>{fixtures=browserFixtures();});test.afterEach(async()=>{await fixtures.cleanup();});
+const panel=(page:import('@playwright/test').Page)=>page.getByRole('region',{name:'Mock Agent review',exact:true});
+test('French Agent pause, evidence, refresh, continue and normal simulated confirmation',async({page})=>{
+ const f=await fixtures.create({language:'fr'});await page.goto(`/inbox?selected=${f.threadId}`);
+ await expect(panel(page)).toContainText('No Agent run yet');
+ await panel(page).getByRole('button',{name:'Start mock Agent',exact:true}).click();
+ await expect(panel(page).getByRole('status')).toHaveText('Paused for review',{timeout:30000});
+ await expect(panel(page).getByRole('region',{name:'Agent evidence'})).toContainText('Version 1');
+ await expect(panel(page)).toContainText(f.answer);
+ const before=await page.request.get(`/api/agent/ui?threadId=${f.threadId}`);const snapshot=(await before.json()).run;
+ await page.reload();await expect(panel(page).getByRole('status')).toHaveText('Paused for review');
+ const after=(await (await page.request.get(`/api/agent/ui?threadId=${f.threadId}`)).json()).run;
+ expect(after.id).toBe(snapshot.id);expect(after.preview.modelCalls).toBe(snapshot.preview.modelCalls);expect(after.preview.toolCalls).toBe(snapshot.preview.toolCalls);
+ await fixtures.clearPreview({threadId:f.threadId});await page.reload();await panel(page).getByRole('button',{name:'Recover saved preview',exact:true}).click();await expect(panel(page).getByRole('button',{name:'Continue & create review handoff'})).toBeVisible();
+ const recovered=(await (await page.request.get(`/api/agent/ui?threadId=${f.threadId}`)).json()).run;expect(recovered.preview.modelCalls).toBe(snapshot.preview.modelCalls);
+ await panel(page).getByRole('button',{name:'Continue & create review handoff'}).click();
+ await expect(panel(page).getByRole('status')).toHaveText('Review handoff saved',{timeout:30000});
+ await expect(page.getByRole('textbox',{name:'Final reply',exact:true})).toHaveValue(f.answer);
+ await page.getByRole('button',{name:'Approve final text & simulate send',exact:true}).click();
+ await expect(page.getByText('Simulated send complete',{exact:true})).toBeVisible();
+ await page.screenshot({path:'test-results/a5-agent-french-handoff.png',fullPage:true});
+});
+test('changed knowledge blocks paused continuation; explicit fresh run uses new evidence',async({page})=>{
+ const f=await fixtures.create();await page.goto(`/inbox?selected=${f.threadId}`);await panel(page).getByRole('button',{name:'Start mock Agent',exact:true}).click();
+ await expect(panel(page).getByRole('status')).toHaveText('Paused for review',{timeout:30000});
+ await page.goto(`/knowledge/${f.entryId}`);await page.getByRole('textbox',{name:'Approved answer',exact:true}).fill('Orders now ship within seven verified business days.');await page.getByRole('button',{name:'Approve & activate',exact:true}).click();
+ await expect(page.getByRole('status').filter({hasText:'Candidate approved'})).toBeVisible();await page.goto(`/inbox?selected=${f.threadId}`);
+ await expect(panel(page)).toContainText('This suggestion cannot continue');await expect(panel(page).getByRole('button',{name:'Continue & create review handoff'})).toHaveCount(0);
+ await panel(page).getByRole('button',{name:'Start refreshed run'}).click();await expect(panel(page).getByRole('status')).toHaveText('Paused for review',{timeout:30000});
+ await expect(panel(page).getByRole('region',{name:'Agent evidence'})).toContainText('Version 2');await expect(panel(page)).toContainText('seven verified');
+});
+test('cancel paused work persists across refresh and cannot continue',async({page})=>{
+ const f=await fixtures.create();await page.goto(`/inbox?selected=${f.threadId}`);await panel(page).getByRole('button',{name:'Start mock Agent',exact:true}).click();
+ await expect(panel(page).getByRole('status')).toHaveText('Paused for review',{timeout:30000});await panel(page).getByRole('button',{name:'Cancel run',exact:true}).click();
+ await expect(panel(page).getByRole('status')).toHaveText('Cancelled',{timeout:30000});await page.reload();await expect(panel(page).getByRole('status')).toHaveText('Cancelled');
+ await expect(panel(page).getByRole('button',{name:'Continue & create review handoff'})).toHaveCount(0);
+});
+test('no evidence escalates and service failure preserves previous draft',async({page})=>{
+ const f=await fixtures.create();await page.goto(`/knowledge/${f.entryId}`);await page.getByRole('button',{name:'Reject candidate',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'Candidate rejected'})).toBeVisible();
+ await page.goto(`/inbox?selected=${f.threadId}`);await panel(page).getByRole('button',{name:'Start mock Agent',exact:true}).click();await expect(panel(page).getByRole('status')).toHaveText('Paused for review',{timeout:30000});await expect(panel(page)).toContainText('Human answer needed');
+ await panel(page).getByRole('button',{name:'Continue & create review handoff'}).click();await expect(panel(page).getByRole('status')).toHaveText('Review handoff saved',{timeout:30000});await expect(page.getByRole('textbox',{name:'Final reply',exact:true})).toHaveCount(0);
+ const g=await fixtures.create({preGenerate:true});await page.goto(`/inbox?selected=${g.threadId}`);const old=await page.getByRole('textbox',{name:'Final reply',exact:true}).inputValue();
+ await page.route('**/api/agent/ui',async route=>{if(route.request().method()==='POST'&&route.request().postDataJSON().op==='EXECUTE')await route.fulfill({status:503,body:'{}'});else await route.continue();});
+ await panel(page).getByRole('button',{name:'Start mock Agent',exact:true}).click();await expect(panel(page).getByRole('alert')).toContainText('saved work is preserved');await expect(page.getByRole('textbox',{name:'Final reply',exact:true})).toHaveValue(old);
+ await page.unroute('**/api/agent/ui');await page.reload();await panel(page).getByRole('button',{name:'Run mock Agent',exact:true}).click();await expect(panel(page).getByRole('status')).toHaveText('Paused for review',{timeout:30000});await expect(page.getByRole('textbox',{name:'Final reply',exact:true})).toHaveValue(old);
+});
+test('cancel fences a delayed execution request and thread IDs cannot access another run',async({page})=>{
+ const f=await fixtures.create();const other=await fixtures.create();await page.goto(`/inbox?selected=${f.threadId}`);
+ let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('**/api/agent/ui',async route=>{if(route.request().method()==='POST'&&route.request().postDataJSON().op==='EXECUTE')await gate;await route.continue();});
+ await panel(page).getByRole('button',{name:'Start mock Agent',exact:true}).click();
+ await expect(panel(page).getByRole('button',{name:'Cancel run',exact:true})).toBeVisible();
+ const state=(await (await page.request.get(`/api/agent/ui?threadId=${f.threadId}`)).json()).run;
+ const wrong=await page.request.post('/api/agent/ui',{headers:{Origin:'http://127.0.0.1:3114'},data:{op:'EXECUTE',threadId:other.threadId,runId:state.id,expectedRevision:state.revision}});expect(wrong.status()).toBe(409);
+ await panel(page).getByRole('button',{name:'Cancel run',exact:true}).click();await expect(panel(page).getByRole('status')).toHaveText('Cancelled',{timeout:30000});release();
+ await expect(panel(page).getByText('Working with mock tools…',{exact:true})).toHaveCount(0);await page.reload();await expect(panel(page).getByRole('status')).toHaveText('Cancelled');await expect(page.getByRole('textbox',{name:'Final reply',exact:true})).toHaveCount(0);
+});

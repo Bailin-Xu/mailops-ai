@@ -1,3 +1,5 @@
+import { AgentPanel } from "./agent-panel";
+import { mockAgentUiEnabled } from "@/lib/agent/ui-config";
 import Link from "next/link";
 import { Pagination } from "@/app/components/pagination";
 
@@ -66,6 +68,7 @@ export default async function InboxPage({ searchParams }: PageProps) {
                 return <article key={message.id}><header><div><span>{message.direction}</span><strong>{sender?.displayName || sender?.emailAddress || "Unknown sender"}</strong></div><time>{message.sentAt?.toLocaleString("en-CA") ?? "Unknown date"}</time></header><p lang={data.selected?.language ?? undefined}>{message.cleanBody || message.normalizedBody}</p><footer><span>{message.attachments.length} attachment{message.attachments.length === 1 ? "" : "s"}</span><span>{message.parseWarnings.length} parse warning{message.parseWarnings.length === 1 ? "" : "s"}</span></footer></article>;
               })}
             </section>
+            {mockAgentUiEnabled() && <AgentPanel key={`agent-${data.selected.id}`} threadId={data.selected.id} />}
             <ClassificationPanel classification={data.selected.classification} key={data.selected.id} providerId={AI_PROVIDER} threadId={data.selected.id} />
           </article>
         ) : <div className="inbox-empty"><h2>{filters.selected ? "Selected thread is unavailable." : "No inbound thread matches."}</h2><p>{filters.selected ? "It may no longer exist or may not contain inbound mail." : "Change the search text or classification filter."}</p>{filters.selected ? <Link href={inboxHref(filters, { selected: undefined })}>Open the first available thread</Link> : null}</div>}

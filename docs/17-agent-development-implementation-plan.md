@@ -2,10 +2,10 @@
 
 Decision date: **2026-10-28**.
 
-Status: **A0–A3 complete (A3: 2026-10-30); A4 in progress (mock only); A5 not started.** See
+Status: **A0–A3 complete (A3: 2026-10-30); A4 in progress (mock only); A5 mock UI integrated; portfolio closure pending.** See
 [the A0 closure](agent/a0-closure.md), [A1 verification](agent/a1-mcp-tools-and-client.md)
 [A2 verification](agent/a2-bounded-workflow-and-tracing.md), and
-[A3 verification](agent/a3-persistence-and-safe-commit.md). Python/FastAPI, LangGraph,
+[A3 verification](agent/a3-persistence-and-safe-commit.md), and [A5 mock integration](agent/a5-mock-review-ui.md). Python/FastAPI, LangGraph,
 MCP, persistent recovery, human continuation and safe business commits are implemented.
 Live evaluation results and live tracing verification are not claimed.
 
@@ -159,7 +159,7 @@ admission state, not a duplicate graph engine.
 
 ## 4. Stage order and progress
 
-A0–A3 are complete; A4 is **in progress (mock only)** and A5 is **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
+A0–A3 are complete; A4 is **in progress (mock only)** and A5 is **in progress (mock UI integrated)**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
 order. Dataset/rubric and trace contracts begin in A0; instrumentation begins in A2,
 so evaluation and observability are not retrofitted after the Agent is built.
 
@@ -170,7 +170,7 @@ so evaluation and observability are not retrofitted after the Agent is built.
 | A2 | Python/LangGraph bounded tool-using workflow and trace events | A1 | Complete — 2026-10-30 |
 | A3 | Durable recovery, human pauses, concurrency and safe business commit | A2 | Complete — 2026-10-30 |
 | A4 | Real-model baseline/Agent evaluation and tracing evidence | A3 | In progress — mock rehearsal/materials ready; live deferred by user |
-| A5 | Integrated review demonstration and portfolio closure | A4 | Not started |
+| A5 | Integrated review demonstration and portfolio closure | A4 live gates deferred by user | In progress — mock UI integrated; narrated demo/portfolio closure pending |
 
 ### A0 — Contracts, fixtures, and evaluation protocol
 
@@ -398,10 +398,12 @@ Acceptance:
 
 ## 6. Immediate next task and later decisions
 
-A0–A3 are complete. The next implementation request should execute **A4 only**:
-calibrate labels and run registered real-model evaluation/tracing with explicit
-synthetic-data, budget and exporter configuration. It must not simultaneously
-build the entire graph, connect private email, run paid experiments or deploy services.
+A0–A3 are complete. By explicit user instruction, A5's mock product integration
+proceeds while A4 live evaluation and human scoring remain deferred. Follow the
+[A5 mock runbook](agent/a5-mock-review-ui.md) to exercise the isolated interface.
+Next evidence work is the synthetic narrated demo/portfolio closure; real-model
+paired evaluation requires a separately confirmed model/budget and human label
+calibration. Do not turn on paid calls merely because mock integration passes.
 
 Decisions resolved during A0: compatible dependency versions, exact ports/schema
 format, checkpoint lifecycle, lease/fencing protocol, neutral demo identity and
@@ -566,3 +568,66 @@ model/API charges or external trace exports occurred; no human scores were fabri
   contract cases**). Default-family real MCP compatibility passed. Business safety
   regression passed: **107 integration tests / 21 files**, unchanged sentinel. No UI change;
   browser tests were not rerun. No Git commit/push.
+
+## 12. A5 mock product integration — 2026-10-30
+
+**Requested mock slice complete; A5 portfolio closure remains in progress.**
+See [the A5 architecture, setup and review runbook](agent/a5-mock-review-ui.md).
+A4 real-model paired evaluation, human scoring and actual external trace evidence
+remain explicitly pending. No paid model or trace export was invoked.
+
+Implemented:
+
+- **A5-T1:** Opt-in inbox panel and same-origin/thread-scoped UI commands expose
+  persisted run state, bounded Search/Inspect summaries, immutable evidence and
+  unapproved EN/FR suggestions. Reads/refreshes do not execute models. Explicit
+  start/resume uses the existing real Python/LangGraph/MCP/checkpoint path with a
+  fixed mock model. A lost preview can be recovered without another graph run.
+- **A5-T2:** Continuation checks current context, classification, draft review
+  revision and approved source revision; changed evidence requires a fresh run.
+  Cancellation invalidates business authority before checkpoint cleanup. Existing
+  human draft editing, review conflicts and simulated sending remain authoritative;
+  no-evidence handoff enters the human-answer/review route. Failed operations
+  preserve prior drafts; late or cancelled previews cannot overwrite newer state.
+- **A5-T4 (local portion):** Added `npm run agent:ui:mock` on loopback port 3115
+  with its own cache and strict test-database guard, an additive nullable preview
+  migration, setup/limitations, and an implemented-claim inventory. Updated CI to
+  run Agent browser tests in its existing isolated Python/checkpoint job. CI has
+  been configured, not executed remotely in this local task.
+
+Verification:
+
+| Check | Result |
+| --- | --- |
+| `npm run check` | ESLint, TypeScript, 176 offline tests / 37 files, production build passed |
+| `npm run agent:check` | Ruff, mypy, 30 Python tests and 31 shared contract fixtures passed |
+| Explicit test-DB `npm run test:integration` | 111 tests / 22 files passed; development isolation sentinel unchanged |
+| `npm run agent:upgrade:test -- --preview` | Prior A3 schema upgrades with null preview on existing admission; French message/classification state unchanged |
+| `npm run agent:upgrade:test` | Earlier pre-admission upgrade check remains passing with the new migration |
+| `MAILOPS_E2E_AGENT=true npm run test:e2e` | 12 passed: 5 Agent workflows and 7 existing review workflows |
+| Focused French preview-loss recovery and final Agent rerun | Recovery passed with unchanged model-call count; all 5 Agent scenarios passed again after the polling guard |
+| Mock launcher smoke | Port 3115 page and read-only status returned successfully; temporary server stopped afterwards |
+| `git diff --check` | Passed |
+
+Browser cases use only owned neutral synthetic fixtures. Checkpoint cleanup is
+scoped by those run UUIDs; no shared checkpoint table/volume was truncated. A
+local screenshot is reproducible at `test-results/a5-agent-french-handoff.png`
+(ignored). **A5-A1** is verified for the mock UI. **A5-A2** has verified local
+startup, migrations and documented pinned setup; a separate clean-machine run is
+not claimed. **A5-A3** is bounded by the implemented-claim inventory: actual
+framework execution is demonstrated with mocks, not live quality evidence.
+
+Resolved during verification: same-loopback origin normalization in Next.js,
+Python virtualenv discovery during production bundling, generated demo-cache
+lint exclusion, and an initial browser run interrupted by a config-triggered
+server restart. Generated Next route types also required serial checks after browser
+startup completed. Final checks pass; these are not remaining failures.
+
+Remaining: **A5-T3** narrated 3–5 minute synthetic EN/FR video and final role-specific
+resume edits/portfolio evidence packaging. No such recording or live-model quality
+improvement is claimed. Checkpoint-loss recovery still follows A3's explicit
+failure policy; this is a foreground local adapter, not a production job system.
+No business data in the normal development database was migrated or changed.
+Temporary test/checkpoint containers were stopped without deleting the checkpoint
+volume; the normal application/database remain separate. No Git commit or push
+was made.
