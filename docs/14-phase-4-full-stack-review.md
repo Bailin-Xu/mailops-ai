@@ -216,3 +216,64 @@ P4-A1 is demonstrated by browser scenarios 1/6 and version/evidence tests; P4-A2
 scenarios 2/5 and conditional review writes; P4-A3 by queue integration tests and
 scenario 4; P4-A4 by scenarios 1–6; P4-A5 by scenario 1 and read-only queue tests.
 Phase 5 and future enterprise integrations are not implemented here.
+
+## CI follow-up — delayed hydration and failure evidence (2026-10-30)
+
+The first GitHub run for `b2ff5c0` passed Python/Agent durability checks, 176
+unit tests and 111 database tests, but failed the two-tab browser scenario at
+`knowledge-review.spec.ts:54`: the expected minimum-answer-length alert did not
+appear. That run did not upload its local trace or page context, so its exact
+browser event sequence cannot be reconstructed retroactively.
+
+A local diagnostic deliberately held Next.js client scripts, entered `short`
+in the server-rendered review form, clicked approval and then released scripts.
+Validation appeared, but the controlled answer field reverted to the original
+saved answer. This deterministically exposed an early-interaction/input-loss
+race; it is evidence of a concrete defect, not proof of the precise event order
+in the earlier GitHub failure. Three ordinary local CI-mode runs had passed
+before this diagnostic, so a passing repeat alone was insufficient.
+
+`CandidateReviewForm` now uses distinct server/client readiness snapshots:
+editable fields and approve/reject controls stay disabled while the server HTML
+awaits React hydration. The form exposes its loading/busy state. Once interactive,
+validation and revision conflicts continue preserving local proposals. This does
+not change database authority, minimum-length validation or revision handling.
+
+The existing two-tab test additionally verifies that React's proposed-text
+comparison reflects the short answer before submitting it. A new second-tab
+regression holds client scripts, checks disabled controls, releases scripts and
+verifies short-answer rejection, input preservation and unchanged knowledge
+version. It uses controlled request gates rather than sleeps, retries or a larger
+timeout. Both scenarios passed three repetitions each after the change.
+
+Playwright now captures screenshots only on failure, retains failed traces and
+produces a non-opening HTML report. The `check` and `agent-durable` CI jobs upload
+`test-results/` and `playwright-report/` under distinct `browser-failure-*`
+artifact names when a preceding step fails, with seven-day retention. If failure
+happens before a browser starts, missing files produce a warning instead of
+inventing a report. Only isolated synthetic browser fixtures are used; environment
+files, private messages and runtime databases are not uploaded.
+
+A deliberately failing local pre-fix diagnostic produced a PNG, `error-context.md`
+and `trace.zip`, verifying collection. Temporary pre-fix evidence was copied to
+`/tmp/mailops-hydration-before.png` and `/tmp/mailops-hydration-before-trace.zip`;
+these are local temporary files, not committed project artifacts. CI upload itself
+requires a future push/run and has not been executed by this uncommitted task.
+
+Local verification for this follow-up:
+
+- `CI=true TEST_DATABASE_URL=<isolated test URL> npm run test:e2e -- knowledge-review.spec.ts --grep 'two tabs|delayed client' --repeat-each=3`: 6 passed.
+- `CI=true TEST_DATABASE_URL=<isolated test URL> npm run test:e2e`: 8 passed;
+  5 Agent-only tests intentionally skipped, matching the ordinary CI job.
+- `CI=true MAILOPS_E2E_AGENT=true AGENT_CHECKPOINT_DATABASE_URL=<isolated checkpoint URL> TEST_DATABASE_URL=<isolated test URL> npm run test:e2e -- agent-review.spec.ts`: 5 passed.
+- `npm run check`: lint, TypeScript, 176 unit tests / 37 files and production build passed.
+- Ruby YAML parsing plus validation of both failure-upload configurations passed;
+  this is not a remote GitHub execution of `upload-artifact`.
+- `git diff --check`: passed. No new dependencies, database migrations, live model
+  calls, Git commits, pushes or merges were performed. Test/checkpoint services
+  were stopped after validation without deleting the checkpoint volume.
+
+The earlier remote run remains failed until a future authorized push and CI run.
+The missing historical trace cannot be recovered by changing the workflow now;
+future failures will retain the evidence needed to distinguish any remaining
+browser event sequence from the locally reproduced and fixed hydration race.

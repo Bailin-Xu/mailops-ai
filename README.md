@@ -187,6 +187,11 @@ human draft saves/rejection and a reproducible browser demonstration. Apply migr
 and restart an existing development server before using the new draft review fields.
 For isolated browser checks, install Chromium with `npx playwright install chromium`,
 start the test database, then run `npm run test:e2e` with `TEST_DATABASE_URL`.
+On failure, Playwright saves screenshots, page context and traces in `test-results/`
+and an HTML report in `playwright-report/`. CI uploads both as `browser-failure-*`
+artifacts for seven days; download/unzip the artifact and use
+`npx playwright show-trace <path-to-trace.zip>` or `npx playwright show-report`
+for diagnosis. These outputs contain synthetic test data and stay out of Git.
 The [thread reconstruction guide](docs/15-phase-5-thread-reconstruction-and-scale.md)
 and [performance report](docs/16-phase-5-performance-report.md) document validated
 plan/apply, historical origins/aliases, stale-work safeguards and measured 1k/10k/50k

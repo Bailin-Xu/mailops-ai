@@ -50,6 +50,7 @@ test("two tabs reject stale edits, retain failed text and explicitly re-review a
   await second.goto(`/knowledge/${f.entryId}`);
   const proposed = "Second reviewer proposes seven day tracked shipping.";
   await second.getByRole("textbox", { name: "Approved answer", exact: true }).fill("short");
+  await expect(second.locator(".review-diff-grid > div").last()).toContainText("short");
   await second.getByRole("button", { name: "Approve & activate", exact: true }).click();
   await expect(second.getByRole("alert").filter({ hasText: "at least 10 characters" })).toBeVisible();
   await expect(second.getByRole("textbox", { name: "Approved answer", exact: true })).toHaveValue("short");
@@ -182,4 +183,41 @@ test("old thread bookmarks resolve to the reconstructed conversation without los
   await page.goto(`/inbox?q=${encodeURIComponent(child.title)}`);
   await expect(page.locator(".inbox-queue > div > a")).toHaveCount(1);
   await expect(page.locator(".inbox-detail-header h2")).toHaveText(parent.title);
+});
+
+test("a second tab cannot edit or submit review before delayed client hydration", async ({ page, context }) => {
+  const f = await fixtures.create();
+  await page.goto(`/knowledge/${f.entryId}`);
+  await expect(page.getByRole("textbox", { name: "Approved answer", exact: true })).toBeEnabled();
+  const second = await context.newPage();
+  let release!: () => void;
+  const scripts = new Promise<void>(resolve => { release = resolve; });
+  let blocked = 0;
+  await second.route("**/_next/static/**/*.js", async route => {
+    blocked += 1;
+    await scripts;
+    await route.continue();
+  });
+  try {
+    await second.goto(`/knowledge/${f.entryId}`, { waitUntil: "commit" });
+    const answer = second.getByRole("textbox", { name: "Approved answer", exact: true });
+    const approve = second.getByRole("button", { name: "Approve & activate", exact: true });
+    await expect(answer).toBeVisible();
+    await expect(answer).toBeDisabled();
+    await expect(approve).toBeDisabled();
+    await expect(second.getByRole("button", { name: "Reject candidate", exact: true })).toBeDisabled();
+    expect(blocked).toBeGreaterThan(0);
+    release();
+    await expect(answer).toBeEnabled();
+    await answer.fill("short");
+    await expect(second.locator(".review-diff-grid > div").last()).toContainText("short");
+    await approve.click();
+    await expect(second.getByRole("alert").filter({ hasText: "at least 10 characters" })).toBeVisible();
+    await expect(answer).toHaveValue("short");
+    await expect(second.getByText("Current version 1 · ACTIVE", { exact: false })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Approved answer", exact: true })).toHaveValue(f.answer);
+  } finally {
+    release();
+    await second.close();
+  }
 });
