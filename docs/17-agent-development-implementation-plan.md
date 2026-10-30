@@ -2,11 +2,12 @@
 
 Decision date: **2026-10-28**.
 
-Status: **A0–A1 complete (2026-10-29); A2–A5 not started.** See
-[the A0 closure](agent/a0-closure.md). A0 adds contracts, fixtures and checks; no
-Python execution service, LangGraph runtime, live evaluation result
-or tracing integration is claimed as implemented. MCP read tools and the Python
-client are implemented; see [A1 verification](agent/a1-mcp-tools-and-client.md).
+Status: **A0–A2 complete (A2: 2026-10-30); A3–A5 not started.** See
+[the A0 closure](agent/a0-closure.md), [A1 verification](agent/a1-mcp-tools-and-client.md)
+and [A2 verification](agent/a2-bounded-workflow-and-tracing.md). Python/FastAPI,
+LangGraph, MCP tools/client and local execution events are implemented. Durable
+recovery, business commits, live evaluation results and live tracing verification
+are not claimed as implemented.
 
 ## 1. Purpose, authority, and scope
 
@@ -158,7 +159,7 @@ admission state, not a duplicate graph engine.
 
 ## 4. Stage order and progress
 
-A0–A1 are complete; A2–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
+A0–A2 are complete; A3–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
 order. Dataset/rubric and trace contracts begin in A0; instrumentation begins in A2,
 so evaluation and observability are not retrofitted after the Agent is built.
 
@@ -166,7 +167,7 @@ so evaluation and observability are not retrofitted after the Agent is built.
 | --- | --- | --- | --- |
 | A0 | Architecture/contracts, isolated fixtures, preregistered evaluation protocol | Completed phases 0–5 | Complete — 2026-10-29 |
 | A1 | Real MCP server/client contract over current services | A0 | Complete — 2026-10-29 |
-| A2 | Python/LangGraph bounded tool-using workflow and trace events | A1 | Not started |
+| A2 | Python/LangGraph bounded tool-using workflow and trace events | A1 | Complete — 2026-10-30 |
 | A3 | Durable recovery, human pauses, concurrency and safe business commit | A2 | Not started |
 | A4 | Real-model baseline/Agent evaluation and tracing evidence | A3 | Not started |
 | A5 | Integrated review demonstration and portfolio closure | A4 | Not started |
@@ -391,8 +392,8 @@ Acceptance:
 
 ## 6. Immediate next task and later decisions
 
-A0–A1 are complete. The next implementation request should execute **A2 only**:
-implement the bounded Python/LangGraph workflow and trace events over the MCP tools. It must not simultaneously
+A0–A2 are complete. The next implementation request should execute **A3 only**:
+add durable recovery, human intervention and safe TS business commits. It must not simultaneously
 build the entire graph, connect private email, run paid experiments or deploy services.
 
 Decisions resolved during A0: compatible dependency versions, exact ports/schema
@@ -439,3 +440,41 @@ A1-T1–T4 and A1-A1–A3 complete. See [A1 architecture, commands and limits](a
   corrected against installed SDK and reran successfully. No claim of compatibility
   with untested SDK versions, durable recovery or model prompt-injection resistance.
 - No UI changes, so browser tests not rerun. No Git commit or push.
+
+
+## 9. A2 closure — 2026-10-30
+
+A2-T1–T5 and A2-A1–A4 complete within the bounded local scope. See
+[A2 implementation/runbook](agent/a2-bounded-workflow-and-tracing.md).
+
+- Added Python FastAPI run/status API, LangGraph context/classification/decision/tool
+  loop, mock and Gemini/LangChain adapters, and structured single-source proposals.
+  Only server-controlled read tools are available; model decisions cannot approve,
+  send or modify existing business drafts. No Inbox integration or business write.
+- Enforced confidence/language gates, source membership/version checks and fresh
+  evidence read; bounded calls, retries, deadlines, conservative input/output token
+  protection and recursion prevent open-ended execution. Failures remain explicit.
+- Added sanitized local event records with correlated run/trace/event IDs, versions,
+  counters and nullable usage; optional metadata-only LangSmith adapter. Export
+  failure is tested to preserve the decision. No live external export was performed.
+- `npm run agent:check` passed: Ruff, mypy (10 source files), **23 Python tests**,
+  and **31 shared contract cases**. Tests assert direct/reformulated search, unknown
+  and conflict escalation, invalid actions/output/source, confidence/language,
+  stale evidence, retry/tool/model/deadline/input budgets and exporter failure.
+  Gemini native tool/structured-output boundary is verified using a fake SDK client.
+- `npm run agent:workflow:test` passed the FastAPI ASGI -> LangGraph/mock -> actual
+  MCP HTTP -> synthetic PostgreSQL flow, producing a French versioned proposal.
+  `npm run agent:mcp:test` passed existing real SDK compatibility/reconnect checks.
+- `npm run check` passed: lint, typecheck, **167 offline tests / 33 files**, production
+  build. Existing isolated regression passed: **93 integration tests / 20 files**,
+  unchanged sentinel. No UI changes; browser tests not rerun.
+- Added a Python/mock CI job; remote CI execution is not claimed. Exact Python
+  tooling versions are locked. New Python type/import issues were fixed before final
+  checks; existing modules were formatted/annotated for the shared quality command.
+- All model tests used mock/fake providers: no real Gemini call, model-quality
+  improvement or actual LangSmith delivery claim. A4 still requires calibrated
+  synthetic labels, registered paired experiments, budget and human scoring.
+- A2 returns WAITING_FOR_HUMAN proposals and in-memory status only. A3 must implement
+  actual persisted interruption/resume, fencing, cancellation and safe business
+  commit receipts before integration with the existing review workflow.
+- No Git commit or push. Disposable fixtures/test services cleaned and stopped.

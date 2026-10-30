@@ -1,17 +1,17 @@
-# Python Agent foundation — A0/A1
+# Python Agent service — A0–A2
 
-The A1 MCP client connects to the TypeScript read-tools service; no Python HTTP server
-or Agent graph exists yet. `contracts.py` validates the same fixtures
-as TypeScript. Tested Python: 3.12.14.
+A2 adds the nonpersistent FastAPI/LangGraph execution service over A1 MCP tools.
+Default model is mock. See [the A2 runbook](../../docs/agent/a2-bounded-workflow-and-tracing.md)
+for startup, credentials, explicit live/export configuration, budgets and limits.
 
 ```bash
 python3.12 -m venv services/agent/.venv
 services/agent/.venv/bin/pip install -r services/agent/requirements.lock
 services/agent/.venv/bin/pip check
-npm run agent:contracts:python
+npm run agent:check
 ```
 
-requirements.in pins selected direct dependencies; requirements.lock records the
-resolved environment including transitive versions. A1 includes real SDK interoperability tests (`npm run agent:mcp:test`). A2 adds the
-Agent execution service. See docs/agent/a1-mcp-tools-and-client.md for startup and scope.
-See docs/agent/adr-001-runtime-and-contracts.md and docs/17 for ownership and scope.
+Python 3.12.14 was used locally. requirements.in pins direct dependencies;
+requirements.lock includes transitive versions. `npm run agent:workflow:test` needs
+the explicit isolated fixture database and tests the real MCP roundtrip with mock AI.
+No model key is needed for normal checks. A3 durability and business commits remain deferred.

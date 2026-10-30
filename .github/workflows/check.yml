@@ -40,3 +40,20 @@ jobs:
       - run: npm run test:integration
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+
+  agent-python:
+    runs-on: ubuntu-latest
+    env:
+      LANGSMITH_TRACING: "false"
+      LANGCHAIN_TRACING_V2: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: python -m venv services/agent/.venv
+      - run: services/agent/.venv/bin/pip install -r services/agent/requirements.lock
+      - run: npm run agent:check

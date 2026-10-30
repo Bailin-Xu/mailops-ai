@@ -10,7 +10,7 @@ async function main() {
   try {
     await new Promise<void>(resolve => server.listen(0,"127.0.0.1",resolve));
     const port = (server.address() as {port:number}).port;
-    const child = spawn("services/agent/.venv/bin/python", ["services/agent/test_mcp_integration.py"], { stdio: "inherit", env: {
+    const child = spawn("services/agent/.venv/bin/python", [process.argv.includes("--agent") ? "services/agent/test_agent_integration.py" : "services/agent/test_mcp_integration.py"], { stdio: "inherit", env: {
       ...process.env, A1_MCP_URL: `http://127.0.0.1:${port}/mcp`, A1_CAPABILITY:secret, A1_RUN_ID:runId,A1_THREAD_ID:fixture.threadId,
     } });
     const code = await new Promise<number | null>((resolve,reject) => { child.once("error",reject); child.once("exit",resolve); });

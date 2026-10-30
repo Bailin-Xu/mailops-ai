@@ -64,3 +64,8 @@ next-env.d.ts
 __pycache__/
 *.pyc
 /data/agent-runs/
+
+# Python quality-check caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/

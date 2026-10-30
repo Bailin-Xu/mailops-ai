@@ -38,7 +38,9 @@
     "agent:fixtures": "tsx scripts/agent/fixtures.ts",
     "agent:contracts:python": "services/agent/.venv/bin/python services/agent/contracts.py",
     "agent:mcp:test": "tsx scripts/agent/test-mcp.ts",
-    "agent:mcp": "tsx services/mcp/start.ts"
+    "agent:mcp": "tsx services/mcp/start.ts",
+    "agent:workflow:test": "tsx scripts/agent/test-mcp.ts --agent",
+    "agent:check": "services/agent/.venv/bin/ruff check services/agent && services/agent/.venv/bin/mypy --config-file services/agent/pyproject.toml services/agent && services/agent/.venv/bin/pytest -c services/agent/pyproject.toml && npm run agent:contracts:python"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
