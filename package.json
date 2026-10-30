@@ -43,7 +43,11 @@
     "agent:check": "services/agent/.venv/bin/ruff check services/agent && services/agent/.venv/bin/mypy --config-file services/agent/pyproject.toml services/agent && services/agent/.venv/bin/pytest -c services/agent/pyproject.toml && npm run agent:contracts:python",
     "agent:durable:test": "tsx scripts/agent/test-durable.ts",
     "agent:checkpoint:setup": "services/agent/.venv/bin/python services/agent/store.py",
-    "agent:upgrade:test": "tsx scripts/agent/test-upgrade.ts"
+    "agent:upgrade:test": "tsx scripts/agent/test-upgrade.ts",
+    "agent:eval:mock": "tsx scripts/agent/evaluate-mock.ts",
+    "agent:review:prepare": "tsx scripts/agent/prepare-review.ts",
+    "agent:review:score": "tsx scripts/agent/score-review.ts",
+    "agent:review:render": "tsx scripts/agent/render-review.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

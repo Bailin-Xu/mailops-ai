@@ -4,7 +4,7 @@ import { snapshotRetriever } from "../../lib/evaluation/benchmark/retrieval";
 import { agentTarget } from "../../scripts/agent/target";
 import type { ToolRepository, Source } from "./tools";
 import dataset from "../../contracts/agent/dataset.json";
-export async function snapshotRepository(url: string, caseId: string) {
+export async function snapshotRepository(url: string, caseId: string, scope: "family" | "corpus" = "family") {
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: agentTarget(url), connectionTimeoutMillis: 1000, statement_timeout: 1000, query_timeout: 1500 }) });
   const selected = dataset.cases.find(c => c.id === caseId);
   if (!selected) throw new Error("Unknown synthetic case");
@@ -26,7 +26,7 @@ export async function snapshotRepository(url: string, caseId: string) {
     },
     async search(query, language, limit, signal) {
       const data = await snapshot(signal);
-      const knowledge = data.knowledge.filter(k => k.family === selected.family).map(k => ({ ...k,
+      const knowledge = data.knowledge.filter(k => (scope === "corpus" || k.family === selected.family)).map(k => ({ ...k,
         language: k.language as "en" | "fr", category: "KNOWN_QUESTION", canonicalQuestion: k.title, approvedAt: "2026-10-29T00:00:00.000Z", version: 1,
         status: k.status as "ACTIVE" | "INACTIVE" }));
       const matches = await db.$transaction(async tx => {
@@ -38,7 +38,7 @@ export async function snapshotRepository(url: string, caseId: string) {
     },
     async revision(id, signal) {
       const data = await snapshot(signal);
-      const row = data.knowledge.find(k => k.family === selected.family && k.revisionId === id);
+      const row = data.knowledge.find(k => (scope === "corpus" || k.family === selected.family) && k.revisionId === id);
       return row ? source(row) : null;
     },
   };

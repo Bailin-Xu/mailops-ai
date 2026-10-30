@@ -2,7 +2,7 @@
 
 Decision date: **2026-10-28**.
 
-Status: **A0–A3 complete (A3: 2026-10-30); A4–A5 not started.** See
+Status: **A0–A3 complete (A3: 2026-10-30); A4 in progress (mock only); A5 not started.** See
 [the A0 closure](agent/a0-closure.md), [A1 verification](agent/a1-mcp-tools-and-client.md)
 [A2 verification](agent/a2-bounded-workflow-and-tracing.md), and
 [A3 verification](agent/a3-persistence-and-safe-commit.md). Python/FastAPI, LangGraph,
@@ -159,7 +159,7 @@ admission state, not a duplicate graph engine.
 
 ## 4. Stage order and progress
 
-A0–A3 are complete; A4–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
+A0–A3 are complete; A4 is **in progress (mock only)** and A5 is **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
 order. Dataset/rubric and trace contracts begin in A0; instrumentation begins in A2,
 so evaluation and observability are not retrofitted after the Agent is built.
 
@@ -169,7 +169,7 @@ so evaluation and observability are not retrofitted after the Agent is built.
 | A1 | Real MCP server/client contract over current services | A0 | Complete — 2026-10-29 |
 | A2 | Python/LangGraph bounded tool-using workflow and trace events | A1 | Complete — 2026-10-30 |
 | A3 | Durable recovery, human pauses, concurrency and safe business commit | A2 | Complete — 2026-10-30 |
-| A4 | Real-model baseline/Agent evaluation and tracing evidence | A3 | Not started |
+| A4 | Real-model baseline/Agent evaluation and tracing evidence | A3 | In progress — mock rehearsal/materials ready; live deferred by user |
 | A5 | Integrated review demonstration and portfolio closure | A4 | Not started |
 
 ### A0 — Contracts, fixtures, and evaluation protocol
@@ -287,6 +287,12 @@ Acceptance:
   disabling Agent mode leaves the original workflow usable without deleting history.
 
 ### A4 — Real evaluation and tracing evidence
+
+
+**User steering — 2026-10-30:** no real model calls for now. Run a mock-only
+rehearsal and prepare human review for the user. Real evaluation, spending/model
+selection and external tracing are deferred, not complete. See the
+[A4 preparation record](agent/a4-mock-evaluation-and-human-review.md).
 
 Tasks:
 
@@ -529,3 +535,34 @@ A3-T1–T5 and A3-A1–A4 complete. See the [A3 architecture/runbook](agent/a3-p
   processing, real model, external tracing, mailbox, deployment, Git commit or push.
 - Test-owned rows/fixtures were cleaned and disposable services stopped. The named
   checkpoint volume is retained. A4 live evaluation and A5 product UX remain next.
+
+
+## 11. A4 preparation progress — 2026-10-30
+
+A4 remains **in progress**, following the user's mock-only instruction. No real
+model/API charges or external trace exports occurred; no human scores were fabricated.
+
+- Added a two-repetition, 40-case full-corpus baseline/Agent rehearsal using the
+  existing TS evaluator and actual bounded Python/LangGraph/MCP path. Corrected
+  run f5847f03-1b7d-4103-84c3-d9f79cfe55d6 completed **160 records**, with zero
+  execution failures in either system. Failed earlier rehearsals remain documented.
+- Prepared 100-case label/French calibration and 160-item blinded scoring packets
+  for the user. All human rating/confirmation fields are blank; import verification
+  accepted **0/160**, correctly leaving human and quality gates incomplete.
+- Saved frozen manifests, result/review hashes, trace IDs, case traces and separate
+  first-search/union retrieval diagnostics. Raw artifacts remain ignored; sanitized
+  mock-only summary is in docs/evaluation/a4-mock-rehearsal.json.
+- New checks cover null human/usage values, duplicate/foreign ratings, presentation
+  blinding, first-search versus union recall, corpus/thread scope, and refusing live
+  Python evaluation. The existing Phase 3 comparison contract is not weakened.
+- Remaining: actual human calibration/scoring, complete registered live budget/resume
+  coordinator, compatible low-cost model selection/pricing, real paired experiments,
+  calibrated human quality gates and actual external tracing evidence. A4-T1/T2 have
+  partial mock infrastructure; T3–T6 and A4-A1–A6 are not all satisfied. No live model
+  quality or statistical improvement is claimed from the rehearsal.
+
+- Final mock-scope checks: `npm run check` passed (lint/typecheck, **174 offline
+  tests / 35 files**, build); `agent:check` passed (**29 Python tests**, **31 shared
+  contract cases**). Default-family real MCP compatibility passed. Business safety
+  regression passed: **107 integration tests / 21 files**, unchanged sentinel. No UI change;
+  browser tests were not rerun. No Git commit/push.

@@ -1,0 +1,56 @@
+{
+  "scope": "MOCK_REHEARSAL_ONLY",
+  "runId": "f5847f03-1b7d-4103-84c3-d9f79cfe55d6",
+  "liveModelCalls": 0,
+  "records": 160,
+  "repetitions": 2,
+  "holdoutCases": 40,
+  "corpusScope": "full frozen synthetic knowledge for both systems",
+  "humanRatings": 0,
+  "labelCalibration": "pending user",
+  "liveEvaluation": "deferred by user",
+  "qualityPassed": null,
+  "scorecards": [
+    {
+      "system": "baseline",
+      "cases": 80,
+      "executionFailures": 0,
+      "routing": 0.3,
+      "firstSearchRecallAt8": 0.14285714285714285,
+      "evidenceUnionRecall": 0.14285714285714285,
+      "humanReviewed": 0,
+      "humanComplete": false,
+      "supportedDrafts": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "qualityPassed": null
+    },
+    {
+      "system": "agent",
+      "cases": 80,
+      "executionFailures": 0,
+      "routing": 0.4,
+      "firstSearchRecallAt8": 0,
+      "evidenceUnionRecall": 0,
+      "humanReviewed": 0,
+      "humanComplete": false,
+      "supportedDrafts": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "qualityPassed": null
+    }
+  ],
+  "failedRehearsals": [
+    {
+      "runId": "712e7216-1d91-4af5-9daa-b3f1f1a50879",
+      "reason": "Legacy manifest schema stripped extra family field; strict fingerprint validation refused run",
+      "records": 0
+    },
+    {
+      "runId": "d5e6873b-36e7-4ee0-8442-66d9eabe31f0",
+      "reason": "Corpus mode selected wrong authorized thread ID; Agent failed closed; fixed and regression-tested",
+      "records": 160,
+      "agentExecutionFailures": 80
+    }
+  ]
+}

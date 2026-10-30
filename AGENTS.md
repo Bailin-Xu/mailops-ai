@@ -11,11 +11,12 @@ The MVP imports `.eml` files, classifies English and French inquiries, allows hu
 Current phase: **MVP foundation and local development**.
 
 Portfolio phases 0–5 are complete. The next selected extension is documented in
-`docs/17-agent-development-implementation-plan.md` (A0–A3 complete; A4–A5 not started).
+`docs/17-agent-development-implementation-plan.md` (A0–A3 complete; A4 mock rehearsal prepared, human/live review pending; A5 not started).
 A0 contracts/fixtures, A1 MCP tools/client, A2 bounded Agent and A3 durable/safe submission are implemented. When explicitly asked to execute
 an A-stage, follow its scoped Python/FastAPI, LangGraph, MCP and evaluation/tracing
 work and acceptance criteria; do not interpret older roadmaps as permission to
-add Gmail, vector search, multi-agent workflows or cloud deployment. Existing
+add Gmail, vector search, multi-agent workflows or cloud deployment. A4 is currently mock-only by user instruction; the user will perform human review.
+Do not run paid models or fill human scores automatically. Existing
 business authority, privacy rules and human-approval boundaries still apply.
 
 Focus only on:
