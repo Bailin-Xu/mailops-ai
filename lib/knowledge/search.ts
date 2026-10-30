@@ -57,7 +57,7 @@ export async function searchActiveKnowledge(
     category?: string;
     limit?: number;
   },
-  db: PrismaClient = getDb(),
+  db: Pick<PrismaClient, "$queryRaw"> = getDb(),
 ): Promise<KnowledgeSearchResult[]> {
   return db.$queryRaw<KnowledgeSearchResult[]>(buildKnowledgeSearchQuery(input));
 }

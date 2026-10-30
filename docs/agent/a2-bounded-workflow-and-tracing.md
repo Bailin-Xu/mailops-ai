@@ -1,5 +1,9 @@
 # A2 — Bounded Python/LangGraph workflow and execution tracing
 
+> Current runtime update: [A3 persistence and business integration](a3-persistence-and-safe-commit.md)
+> supersedes the nonpersistent/synthetic-only runtime boundaries described historically below.
+
+
 Date: 2026-10-30. Status: implemented locally; A3 persistence/commit not implemented.
 
 ## Runtime and business boundary

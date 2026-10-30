@@ -1,5 +1,9 @@
 # A1 — MCP tools and Python client
 
+> Current runtime update: [A3 persistence and business integration](a3-persistence-and-safe-commit.md)
+> supersedes the nonpersistent/synthetic-only runtime boundaries described historically below.
+
+
 Date: 2026-10-29. Status: implemented; synthetic-only read tools.
 
 ## Delivered boundary

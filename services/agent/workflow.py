@@ -4,7 +4,9 @@ import asyncio
 import json
 import time
 from typing import Any, Protocol, TypedDict
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import interrupt, Command as GraphCommand
 from langsmith import tracing_context
 from contracts import Command, Proposal
 from decisions import Classification, DECISIONS, Draft, Escalate, Inspect, Search
@@ -32,8 +34,11 @@ class State(TypedDict, total=False):
 
 
 class Workflow:
-    def __init__(self, command: Command, model: Model, tools: Tools, trace: Trace, seconds: float = 120):
+    def __init__(
+        self, command: Command, model: Model, tools: Tools, trace: Trace, seconds: float = 120, reserve: Any = None
+    ):
         self.command, self.model, self.tools, self.trace = command, model, tools, trace
+        self.reserve = reserve
         self.seconds = min(seconds, 120)
         self.model_calls = self.tool_calls = 0
         self.verified: dict[str, SourceResult] = {}
@@ -44,7 +49,12 @@ class Workflow:
         for attempt in range(2):
             if self.tool_calls >= 8:
                 raise Halt("BUDGET")
-            self.tool_calls += 1
+            if self.reserve:
+                counts = await self.reserve("tool")
+                self.model_calls = counts["models"]
+                self.tool_calls = counts["tools"]
+            else:
+                self.tool_calls += 1
             self.trace.emit("tool_start", tool=name, attempt=attempt + 1)
             try:
                 result = await asyncio.wait_for(self.tools.call(name, {"runId": self.command.runId, **args}), 5)
@@ -63,7 +73,12 @@ class Workflow:
         for attempt in range(2):
             if self.model_calls >= 6:
                 raise Halt("BUDGET")
-            self.model_calls += 1
+            if self.reserve:
+                counts = await self.reserve("model")
+                self.model_calls = counts["models"]
+                self.tool_calls = counts["tools"]
+            else:
+                self.model_calls += 1
             started = time.monotonic()
             self.trace.emit("model_start", model=self.model.id, attempt=attempt + 1)
             try:
@@ -190,9 +205,20 @@ class Workflow:
                 raise Halt("STALE")
             self.verified[source.revisionId] = source
             result = source.model_dump()
-        return {"observations": [*state["observations"], {"name": action["name"], "result": result}]}
+        return {
+            "observations": [
+                *state["observations"],
+                {"name": action["name"], "arguments": action["arguments"], "result": result},
+            ]
+        }
 
-    async def run(self) -> dict[str, Any]:
+    async def handoff(self, state: State) -> State:
+        interrupt({"kind": "HUMAN_REVIEW", "outcome": state["proposal"]["outcome"]})
+        return {}
+
+    async def run(
+        self, checkpointer: Any = None, continuation: bool = False, expect_checkpoint: bool = False
+    ) -> dict[str, Any]:
         self.trace.emit(
             "run_start",
             model=self.model.id,
@@ -207,15 +233,78 @@ class Workflow:
         graph.add_node("tool", self.act)
         graph.add_edge(START, "context")
         graph.add_edge("context", "classify")
-        graph.add_conditional_edges("classify", lambda s: END if s.get("done") else "decide")
-        graph.add_conditional_edges("decide", lambda s: END if s.get("done") else "tool")
+        graph.add_conditional_edges(
+            "classify", lambda s: ("handoff" if checkpointer else END) if s.get("done") else "decide"
+        )
+        graph.add_conditional_edges(
+            "decide", lambda s: ("handoff" if checkpointer else END) if s.get("done") else "tool"
+        )
         graph.add_edge("tool", "decide")
+        if checkpointer:
+            graph.add_node("handoff", self.handoff)
+            graph.add_edge("handoff", END)
+        compiled = graph.compile(checkpointer=checkpointer)
+        config: RunnableConfig = {"recursion_limit": 40, "configurable": {"thread_id": self.command.runId}}
+        incoming: Any = {}
         try:
+            if checkpointer:
+                saved = await compiled.aget_state(config)
+                if expect_checkpoint and not saved.values and not saved.next:
+                    raise Halt("CHECKPOINT_UNAVAILABLE")
+                if saved.next:
+                    incoming = GraphCommand(resume="CONTINUE") if saved.interrupts and continuation else None
+                if saved.values and "context" in saved.values:
+                    values = saved.values
+                    self.language = values["context"]["language"]
+                    # Reauthorize current context and saved evidence after process/server restart.
+                    current = ThreadResult.model_validate(
+                        await self.tool("get_thread_context", {"reference": self.command.context.threadId})
+                    )
+                    if current.contextHash != self.command.context.contextHash:
+                        raise Halt("STALE")
+                    refreshed: dict[str, SourceResult] = {}
+                    for observation in values.get("observations", []):
+                        if observation["name"] == "Search":
+                            # Search arguments are persisted in the observation, never read from model text.
+                            args = observation.get("arguments")
+                            if args:
+                                fresh = SearchResult.model_validate(await self.tool("search_approved_knowledge", args))
+                                refreshed.update({s.revisionId: s for s in fresh.sources})
+                        elif observation["name"] == "Inspect":
+                            old = SourceResult.model_validate(observation["result"])
+                            if refreshed.get(old.revisionId) != old:
+                                raise Halt("STALE")
+                            now = SourceResult.model_validate(
+                                await self.tool("get_knowledge_revision", {"reference": old.revisionId})
+                            )
+                            if now != old:
+                                raise Halt("STALE")
+                            self.verified[old.revisionId] = old
+                    self.retrieved = {
+                        s["revisionId"]: SourceResult.model_validate(s)
+                        for o in values.get("observations", [])
+                        if o["name"] == "Search"
+                        for s in o["result"]["sources"]
+                    }
+                    incoming = GraphCommand(resume="CONTINUE") if saved.interrupts and continuation else None
             with tracing_context(enabled=False):
                 state = await asyncio.wait_for(
-                    graph.compile().ainvoke({}, config={"recursion_limit": 40}), self.seconds
+                    (
+                        compiled.ainvoke(incoming, config=config, durability="sync")
+                        if checkpointer
+                        else compiled.ainvoke(incoming, config=config)
+                    ),
+                    self.seconds,
                 )
-            result = {"status": "WAITING_FOR_HUMAN", "code": "OK", "proposal": state["proposal"]}
+            result = {
+                "status": "WAITING_FOR_HUMAN"
+                if not checkpointer or state.get("__interrupt__")
+                else "PROPOSAL_ACCEPTABLE",
+                "code": "OK",
+                "proposal": state["proposal"],
+                "classification": state.get("classification"),
+                "observations": state.get("observations", []),
+            }
         except Halt as error:
             result = {
                 "status": "STALE"

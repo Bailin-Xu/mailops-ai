@@ -2,12 +2,12 @@
 
 Decision date: **2026-10-28**.
 
-Status: **A0–A2 complete (A2: 2026-10-30); A3–A5 not started.** See
+Status: **A0–A3 complete (A3: 2026-10-30); A4–A5 not started.** See
 [the A0 closure](agent/a0-closure.md), [A1 verification](agent/a1-mcp-tools-and-client.md)
-and [A2 verification](agent/a2-bounded-workflow-and-tracing.md). Python/FastAPI,
-LangGraph, MCP tools/client and local execution events are implemented. Durable
-recovery, business commits, live evaluation results and live tracing verification
-are not claimed as implemented.
+[A2 verification](agent/a2-bounded-workflow-and-tracing.md), and
+[A3 verification](agent/a3-persistence-and-safe-commit.md). Python/FastAPI, LangGraph,
+MCP, persistent recovery, human continuation and safe business commits are implemented.
+Live evaluation results and live tracing verification are not claimed.
 
 ## 1. Purpose, authority, and scope
 
@@ -159,7 +159,7 @@ admission state, not a duplicate graph engine.
 
 ## 4. Stage order and progress
 
-A0–A2 are complete; A3–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
+A0–A3 are complete; A4–A5 are **not started**. A0 → A1 → A2 → A3 → A4 → A5 is the delivery
 order. Dataset/rubric and trace contracts begin in A0; instrumentation begins in A2,
 so evaluation and observability are not retrofitted after the Agent is built.
 
@@ -168,7 +168,7 @@ so evaluation and observability are not retrofitted after the Agent is built.
 | A0 | Architecture/contracts, isolated fixtures, preregistered evaluation protocol | Completed phases 0–5 | Complete — 2026-10-29 |
 | A1 | Real MCP server/client contract over current services | A0 | Complete — 2026-10-29 |
 | A2 | Python/LangGraph bounded tool-using workflow and trace events | A1 | Complete — 2026-10-30 |
-| A3 | Durable recovery, human pauses, concurrency and safe business commit | A2 | Not started |
+| A3 | Durable recovery, human pauses, concurrency and safe business commit | A2 | Complete — 2026-10-30 |
 | A4 | Real-model baseline/Agent evaluation and tracing evidence | A3 | Not started |
 | A5 | Integrated review demonstration and portfolio closure | A4 | Not started |
 
@@ -392,8 +392,9 @@ Acceptance:
 
 ## 6. Immediate next task and later decisions
 
-A0–A2 are complete. The next implementation request should execute **A3 only**:
-add durable recovery, human intervention and safe TS business commits. It must not simultaneously
+A0–A3 are complete. The next implementation request should execute **A4 only**:
+calibrate labels and run registered real-model evaluation/tracing with explicit
+synthetic-data, budget and exporter configuration. It must not simultaneously
 build the entire graph, connect private email, run paid experiments or deploy services.
 
 Decisions resolved during A0: compatible dependency versions, exact ports/schema
@@ -478,3 +479,53 @@ A2-T1–T5 and A2-A1–A4 complete within the bounded local scope. See
   actual persisted interruption/resume, fencing, cancellation and safe business
   commit receipts before integration with the existing review workflow.
 - No Git commit or push. Disposable fixtures/test services cleaned and stopped.
+
+
+## 10. A3 closure — 2026-10-30
+
+A3-T1–T5 and A3-A1–A4 complete. See the [A3 architecture/runbook](agent/a3-persistence-and-safe-commit.md).
+
+- Separate PostgreSQL checkpoints/control records persist the real LangGraph
+  interrupt and cumulative model/tool/time budgets. Code/dependency/context
+  fingerprints, control-row checkpoint fencing and 30-second execution leases
+  prevent stale/competing processes from advancing work. No automatic DDL fallback.
+- Authenticated opt-in TS commands admit an existing classification, lease/pause/
+  cancel work, and commit proposals. The default application remains disabled for
+  Agent access. The MCP application adapter reads the admitted canonical context
+  and active immutable knowledge revisions; no model gets a write/approval tool.
+- Resume revalidates inbound/review state and previously inspected knowledge,
+  including after listener recreation. Stale work cannot become an approved draft.
+  Continuation only creates GENERATED drafts; final editing/confirmation/simulated
+  send stays in the existing human workflow.
+- Extracted the transaction-local grounded draft persistence boundary. Agent and
+  baseline share consistency/old-draft protection. Proposal/evidence validation,
+  classification transition, draft and receipt write are one serializable transaction.
+  Exact semantic replay returns the receipt; altered payload fails. Renewed lease
+  fields do not change semantic identity, but every new mutation checks their fence.
+- Persisted submissions recover pre-submit connection failures without repeating
+  model/tool work. Business receipts reconcile lost acknowledgements and remain
+  readable after graph/control records are lost. Uncommitted checkpoint loss/failure
+  is explicit; the baseline can still process work with Agent mode disabled.
+- Real subprocess harness passed **9 scenarios**: human pause/restart, SIGKILL before
+  tool result, SIGKILL after checkpoint, lost commit response plus checkpoint/control
+  loss after commit, uncommitted checkpoint loss, active cancellation/late results,
+  checkpoint connection failure, failed-submit retry, and knowledge revision during
+  pause with recreated MCP listener. A competing process is rejected. Tests advance
+  expiry only in owned rows; no paid model calls are exactly-once claims.
+- `npm run check` passed: lint, typecheck, **169 offline tests / 34 files**, production
+  build. `npm run agent:check` passed: Ruff, mypy (**16 Python files**), **28 Python
+  tests** and **31 shared contract cases**. Existing plus A3 database regression:
+  **107 integration tests / 21 files**, unchanged isolation sentinel.
+- A1 real MCP reconnect tests and A2 complete mock/ASGI/MCP compatibility passed.
+  Previous-schema scratch upgrade preserved legacy French/messages/classifications;
+  Prisma validate passed and migrated-schema comparison reported no difference.
+- Initial test/type failures were corrected: nonpersistent graph durability mode,
+  checkpoint-time stale errors wrapped by MCP cleanup, expected human-correction
+  supersession, and new fixture typing. Final checks above passed. The first build
+  attempt hit local process restrictions; the full permitted retry passed.
+- Durable CI with isolated business/checkpoint/fixture databases is configured;
+  remote CI was not run. No UI changes; browser tests not rerun. Only synthetic
+  fixtures/scratch databases were written. No development Inbox migration or Agent
+  processing, real model, external tracing, mailbox, deployment, Git commit or push.
+- Test-owned rows/fixtures were cleaned and disposable services stopped. The named
+  checkpoint volume is retained. A4 live evaluation and A5 product UX remain next.

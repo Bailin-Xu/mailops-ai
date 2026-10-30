@@ -38,6 +38,11 @@ export async function ensureCurrentKnowledgeRevision(
 export async function captureApprovedKnowledge(entryId: string, db: PrismaClient = getDb()) {
   z.string().uuid().parse(entryId);
   return workflowTransaction(db, async (transaction) => {
+    return captureApprovedKnowledgeInTransaction(entryId, transaction);
+  });
+}
+
+export async function captureApprovedKnowledgeInTransaction(entryId: string, transaction: Prisma.TransactionClient) {
     const found = await transaction.knowledgeEntry.findUnique({ where: { id: entryId } });
     if (!found || found.status !== "ACTIVE") throw new WorkflowConflictError();
     const entry = await ensureCurrentKnowledgeRevision(found, transaction);
@@ -48,7 +53,6 @@ export async function captureApprovedKnowledge(entryId: string, db: PrismaClient
     }
     knowledgeFactsSchema.parse(revision);
     return { entry, revision };
-  });
 }
 
 export async function markAffectedDrafts(entry: KnowledgeEntry, transaction: Prisma.TransactionClient) {

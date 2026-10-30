@@ -224,6 +224,7 @@ model Classification {
   thread              EmailThread                @relation(fields: [threadId], references: [id], onDelete: Restrict)
   aiExecution         AIExecution                @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
   drafts              Draft[]
+  agentRuns           AgentAdmission[]
   bugTicket           BugTicket?
 
   @@index([threadId, createdAt])
@@ -671,4 +672,30 @@ model AttachmentMetadata {
   message   EmailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
+}
+
+model AgentAdmission {
+  id String @id @db.Uuid
+  classificationId String @db.Uuid
+  classification Classification @relation(fields: [classificationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  context Json
+  status String @default("READY")
+  revision Int @default(0)
+  fence Int @default(0)
+  owner String? @db.Uuid
+  claimId String? @db.Uuid
+  claimHash String?
+  leaseUntil DateTime?
+  receipts AgentCommitReceipt[]
+  createdAt DateTime @default(now())
+  @@index([classificationId, status])
+}
+model AgentCommitReceipt {
+  runId String @db.Uuid
+  commandId String @db.Uuid
+  run AgentAdmission @relation(fields: [runId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  payloadHash String
+  result Json
+  createdAt DateTime @default(now())
+  @@id([runId,commandId])
 }

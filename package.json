@@ -40,7 +40,10 @@
     "agent:mcp:test": "tsx scripts/agent/test-mcp.ts",
     "agent:mcp": "tsx services/mcp/start.ts",
     "agent:workflow:test": "tsx scripts/agent/test-mcp.ts --agent",
-    "agent:check": "services/agent/.venv/bin/ruff check services/agent && services/agent/.venv/bin/mypy --config-file services/agent/pyproject.toml services/agent && services/agent/.venv/bin/pytest -c services/agent/pyproject.toml && npm run agent:contracts:python"
+    "agent:check": "services/agent/.venv/bin/ruff check services/agent && services/agent/.venv/bin/mypy --config-file services/agent/pyproject.toml services/agent && services/agent/.venv/bin/pytest -c services/agent/pyproject.toml && npm run agent:contracts:python",
+    "agent:durable:test": "tsx scripts/agent/test-durable.ts",
+    "agent:checkpoint:setup": "services/agent/.venv/bin/python services/agent/store.py",
+    "agent:upgrade:test": "tsx scripts/agent/test-upgrade.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

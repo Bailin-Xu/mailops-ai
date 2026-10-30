@@ -8,7 +8,7 @@ export const threadOutput = z.strictObject({ threadId: z.string().uuid(), contex
 export const searchOutput = z.strictObject({ sources: z.array(sourceSchema).max(8) });
 export const revisionOutput = sourceSchema;
 export type Source = { id: string; revisionId: string; title: string; answer: string; language: "en" | "fr"; status: string };
-export type Thread = { id: string; subject: string; body: string; language: "en" | "fr" };
+export type Thread = { id: string; subject: string; body: string; language: "en" | "fr"; contextHash?: string };
 export interface ToolRepository {
   thread(id: string, signal: AbortSignal): Promise<Thread | null>;
   search(query: string, language: "en" | "fr", limit: number, signal: AbortSignal): Promise<Source[]>;
@@ -41,7 +41,7 @@ export function createTools(repository: ToolRepository, grant: Grant, timeoutMs 
       const row = await bounded(signal => repository.thread(args.reference, signal)); authorize(args.runId);
       if (!row || row.id !== grant.threadId) throw new ToolFailure("NOT_ELIGIBLE");
       const result = threadOutput.safeParse({ threadId: row.id, subject: row.subject, body: row.body, language: row.language,
-        contextHash: sourceContextHash({ id: row.id, subject: row.subject, messages: [{ id: row.id, sentAt: null, cleanBody: row.body, normalizedBody: row.body }] }), trust: "UNTRUSTED_TEXT" });
+        contextHash: row.contextHash ?? sourceContextHash({ id: row.id, subject: row.subject, messages: [{ id: row.id, sentAt: null, cleanBody: row.body, normalizedBody: row.body }] }), trust: "UNTRUSTED_TEXT" });
       if (!result.success) throw new ToolFailure("OUTPUT_LIMIT");
       return result.data;
     },

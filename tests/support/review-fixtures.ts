@@ -47,6 +47,8 @@ export function syntheticFixtures() {
     // Failed draft executions have no relation; scope them using the fixture classification IDs.
     const classifications = await db.classification.findMany({ where: { threadId: { in: threadIds } }, select: { id: true } });
     for (const classification of classifications) await db.aIExecution.deleteMany({ where: { status: "FAILED", inputMetadata: { path: ["classificationId"], equals: classification.id } } });
+    await db.agentCommitReceipt.deleteMany({where:{run:{classification:{threadId:{in:threadIds}}}}});
+    await db.agentAdmission.deleteMany({where:{classification:{threadId:{in:threadIds}}}});
     await db.draftKnowledgeSource.deleteMany({ where: { draft: { threadId: { in: threadIds } } } });
     await db.draft.deleteMany({ where: { threadId: { in: threadIds } } });
     await db.classification.deleteMany({ where: { threadId: { in: threadIds } } });

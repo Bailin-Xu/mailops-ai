@@ -23,6 +23,14 @@ class McpTools:
     async def call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         result = await call_tool(self.session, name, args)
         if result.is_error:
+            import json
+            from workflow import Halt
+
+            code = json.loads(result.content[0].text).get("code")
+            if code == "NOT_ELIGIBLE":
+                raise Halt("STALE")
+            if code == "TIMEOUT":
+                raise TimeoutError()
             raise ValueError("MCP_TOOL_ERROR")
         return dict(result.structured_content)
 
@@ -34,6 +42,7 @@ def create_app(
     capability: str,
     model: Model | None = None,
     exporter: Callable[[dict[str, Any]], None] | None = None,
+    runtime: Any = None,
 ) -> FastAPI:
     if len(token) < 32:
         raise ValueError("Explicit service credential required")
@@ -57,6 +66,22 @@ def create_app(
     async def start(command: Command) -> dict[str, Any]:
         if command.runId != run_id:
             raise HTTPException(403, "UNAUTHORIZED")
+        if runtime:
+            if (command.graphVersion, command.policyVersion, command.promptVersion) != (
+                "agent-graph-v1",
+                "agent-policy-v1",
+                "agent-prompt-v1",
+            ):
+                raise HTTPException(409, "UNSUPPORTED_VERSION")
+            try:
+                return await runtime.execute(command)
+            except Exception as error:
+                from store import RuntimeConflict
+                from bridge import BusinessConflict
+
+                if isinstance(error, (RuntimeConflict, BusinessConflict)):
+                    raise HTTPException(409, "DURABLE_COMMAND_CONFLICT") from None
+                raise HTTPException(503, "CHECKPOINT_OR_SERVICE_UNAVAILABLE") from None
         if (
             command.action != "START"
             or command.expectedRunRevision != 0
@@ -79,6 +104,13 @@ def create_app(
 
     @app.get("/runs/{requested_id}")
     async def status(requested_id: str) -> dict[str, Any]:
+        if runtime:
+            if requested_id != run_id:
+                raise HTTPException(404, "RUN_NOT_FOUND")
+            try:
+                return await runtime.status(run_id)
+            except Exception:
+                raise HTTPException(503, "CHECKPOINT_OR_SERVICE_UNAVAILABLE") from None
         if requested_id != run_id or requested_id not in records:
             raise HTTPException(404, "RUN_NOT_FOUND")
         return records[requested_id]
@@ -117,6 +149,18 @@ def from_environment() -> FastAPI:
         if os.environ.get("AGENT_TRACE_EXPORT_ENABLED") == "true"
         else None
     )
+    from runtime import DurableRuntime
+    from store import Store
+    from bridge import Bridge
+
+    runtime = DurableRuntime(
+        Store(os.environ["AGENT_CHECKPOINT_DATABASE_URL"]),
+        Bridge(os.environ["AGENT_BRIDGE_URL"], os.environ["AGENT_BRIDGE_TOKEN"]),
+        os.environ["AGENT_MCP_URL"],
+        os.environ["MCP_CAPABILITY"],
+        selected,
+        exporter,
+    )
     return create_app(
         os.environ["AGENT_SERVICE_TOKEN"],
         os.environ["MCP_RUN_ID"],
@@ -124,4 +168,5 @@ def from_environment() -> FastAPI:
         os.environ["MCP_CAPABILITY"],
         selected,
         exporter,
+        runtime,
     )

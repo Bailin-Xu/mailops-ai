@@ -57,3 +57,66 @@ jobs:
       - run: python -m venv services/agent/.venv
       - run: services/agent/.venv/bin/pip install -r services/agent/requirements.lock
       - run: npm run agent:check
+
+  agent-durable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      business:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mailops_test
+          POSTGRES_USER: mailops_test
+          POSTGRES_PASSWORD: mailops_test_ci
+        ports: ["5434:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mailops_test -d mailops_test"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+      checkpoint:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mailops_agent_checkpoint
+          POSTGRES_USER: mailops_agent_checkpoint
+          POSTGRES_PASSWORD: mailops_agent_checkpoint_local
+        ports: ["5436:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mailops_agent_checkpoint -d mailops_agent_checkpoint"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+      fixtures:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mailops_agent_a0
+          POSTGRES_USER: mailops_agent_a0
+          POSTGRES_PASSWORD: mailops_agent_a0_local
+        ports: ["5435:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mailops_agent_a0 -d mailops_agent_a0"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://mailops:unused@127.0.0.1:5433/mailops
+      TEST_DATABASE_URL: postgresql://mailops_test:mailops_test_ci@127.0.0.1:5434/mailops_test
+      AGENT_SENTINEL_DATABASE_URL: postgresql://mailops_test:mailops_test_ci@127.0.0.1:5434/mailops_test
+      AGENT_FIXTURE_DATABASE_URL: postgresql://mailops_agent_a0:mailops_agent_a0_local@127.0.0.1:5435/mailops_agent_a0
+      AGENT_CHECKPOINT_DATABASE_URL: postgresql://mailops_agent_checkpoint:mailops_agent_checkpoint_local@127.0.0.1:5436/mailops_agent_checkpoint
+      LANGSMITH_TRACING: "false"
+      LANGCHAIN_TRACING_V2: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: python -m venv services/agent/.venv
+      - run: services/agent/.venv/bin/pip install -r services/agent/requirements.lock
+      - run: DATABASE_URL="$TEST_DATABASE_URL" npm run db:deploy
+      - run: npm run agent:checkpoint:setup
+      - run: npm run agent:fixtures -- setup
+      - run: npm run agent:mcp:test
+      - run: npm run agent:workflow:test
+      - run: npm run agent:durable:test
+      - run: npm run agent:upgrade:test
+      - run: npm run agent:fixtures -- cleanup

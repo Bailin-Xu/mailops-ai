@@ -9,4 +9,4 @@ check_untyped_defs = true
 follow_imports = "silent"
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ["test_workflow.py"]
+testpaths = ["test_workflow.py", "test_store.py"]

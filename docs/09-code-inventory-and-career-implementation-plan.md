@@ -6,7 +6,7 @@ Status: **Phases 0–5 complete (Phase 5: 2026-10-28).**
 
 Next selected direction: **Python + LangGraph + MCP + real-model evaluation and
 tracing**, planned in [docs/17](17-agent-development-implementation-plan.md).
-Its stages use IDs **A0–A5**; A0–A2 are complete (A2: 2026-10-30), A3–A5 are not started. It is a separate, scoped
+Its stages use IDs **A0–A5**; A0–A3 are complete (A3: 2026-10-30), A4–A5 are not started. It is a separate, scoped
 extension; this document's completed-phase evidence remains unchanged.
 
 ## 1. Purpose and Scope

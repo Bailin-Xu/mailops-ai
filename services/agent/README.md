@@ -1,7 +1,7 @@
-# Python Agent service — A0–A2
+# Python Agent service — A0–A3
 
-A2 adds the nonpersistent FastAPI/LangGraph execution service over A1 MCP tools.
-Default model is mock. See [the A2 runbook](../../docs/agent/a2-bounded-workflow-and-tracing.md)
+A3 adds durable PostgreSQL execution, human continuation and safe TS business submission.
+Default model is mock. See [the A2 runbook](../../docs/agent/a3-persistence-and-safe-commit.md)
 for startup, credentials, explicit live/export configuration, budgets and limits.
 
 ```bash
@@ -14,4 +14,6 @@ npm run agent:check
 Python 3.12.14 was used locally. requirements.in pins direct dependencies;
 requirements.lock includes transitive versions. `npm run agent:workflow:test` needs
 the explicit isolated fixture database and tests the real MCP roundtrip with mock AI.
-No model key is needed for normal checks. A3 durability and business commits remain deferred.
+No model key is needed for normal checks. Production startup requires explicit isolated checkpoint and authenticated TS bridge
+configuration. Initialize checkpoint schemas with npm run agent:checkpoint:setup.
+The real subprocess recovery suite is npm run agent:durable:test.
